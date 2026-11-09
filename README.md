@@ -12,7 +12,7 @@ accounts, database, or persistence exists.
 ## Intended future MVP
 
 The planned scope is one active quiz with one host and roughly 2–10 players.
-Players join with a nickname before the host starts. The server loads quiz JSON
+Players join with a nickname before the host starts. The server loads quiz YAML
 with four choices per question, runs a fixed question timer, and lets the host
 advance between questions; the quiz ends with a final leaderboard. The scoring
 formula is still to be finalized. These are future requirements, not implemented
@@ -58,7 +58,7 @@ without `@ts-nocheck`, and included in client typechecking.
 | `src/client` | React UI, file routes, and caller-owned Eden transport                  |
 | `src/server` | Elysia endpoints, production static serving, future authoritative rules |
 | `src/shared` | Public runtime message schemas and derived types                        |
-| `quizzes`    | Server-only hand-authored JSON and format schema, including answer keys |
+| `quizzes`    | Server-only hand-authored YAML and format schema, including answer keys |
 | `tests`      | HTTP, configuration, and protocol boundary checks with Bun              |
 | `docs`       | Deployment, protocol decisions, report/evaluation outline               |
 
