@@ -1,5 +1,7 @@
-import { Anchor, Container, Group, Stack, Text, Title } from '@mantine/core';
-import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
+import { Container, Group, Stack, Text, Title } from '@mantine/core';
+import { createRootRoute, Outlet } from '@tanstack/react-router';
+
+import { Link } from '../components/Link';
 
 export const Route = createRootRoute({
   component: Layout,
@@ -15,39 +17,9 @@ export function Layout() {
             Comet Network Quiz
           </Title>
           <Group component="nav" aria-label="Main navigation" gap="lg">
-            <Anchor
-              renderRoot={(props) => (
-                <Link
-                  {...props}
-                  to="/"
-                  activeProps={{ 'aria-current': 'page' }}
-                />
-              )}
-            >
-              Home
-            </Anchor>
-            <Anchor
-              renderRoot={(props) => (
-                <Link
-                  {...props}
-                  to="/host"
-                  activeProps={{ 'aria-current': 'page' }}
-                />
-              )}
-            >
-              Host
-            </Anchor>
-            <Anchor
-              renderRoot={(props) => (
-                <Link
-                  {...props}
-                  to="/play"
-                  activeProps={{ 'aria-current': 'page' }}
-                />
-              )}
-            >
-              Play
-            </Anchor>
+            <Link to="/">Home</Link>
+            <Link to="/host">Host</Link>
+            <Link to="/play">Play</Link>
           </Group>
         </header>
         <main>
