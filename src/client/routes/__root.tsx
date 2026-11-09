@@ -1,4 +1,4 @@
-import { Badge, Container, Group, Stack, Text, Title } from '@mantine/core';
+import { Anchor, Container, Group, Stack, Text, Title } from '@mantine/core';
 import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
 
 export const Route = createRootRoute({
@@ -11,30 +11,48 @@ export function Layout() {
     <Container size="sm" py="xl">
       <Stack gap="xl">
         <header>
-          <Group justify="space-between" mb="md">
-            <Title order={1} size="h2">
-              Comet Network Quiz
-            </Title>
-            <Badge variant="light">Scaffold</Badge>
-          </Group>
+          <Title order={1} size="h2" mb="md">
+            Comet Network Quiz
+          </Title>
           <Group component="nav" aria-label="Main navigation" gap="lg">
-            <Link to="/" activeProps={{ 'aria-current': 'page' }}>
-              Overview
-            </Link>
-            <Link to="/host" activeProps={{ 'aria-current': 'page' }}>
+            <Anchor
+              renderRoot={(props) => (
+                <Link
+                  {...props}
+                  to="/"
+                  activeProps={{ 'aria-current': 'page' }}
+                />
+              )}
+            >
+              Home
+            </Anchor>
+            <Anchor
+              renderRoot={(props) => (
+                <Link
+                  {...props}
+                  to="/host"
+                  activeProps={{ 'aria-current': 'page' }}
+                />
+              )}
+            >
               Host
-            </Link>
-            <Link to="/play" activeProps={{ 'aria-current': 'page' }}>
+            </Anchor>
+            <Anchor
+              renderRoot={(props) => (
+                <Link
+                  {...props}
+                  to="/play"
+                  activeProps={{ 'aria-current': 'page' }}
+                />
+              )}
+            >
               Play
-            </Link>
+            </Anchor>
           </Group>
         </header>
         <main>
           <Outlet />
         </main>
-        <Text component="footer" size="sm" c="dimmed">
-          Infrastructure only. Multiplayer gameplay is not implemented.
-        </Text>
       </Stack>
     </Container>
   );

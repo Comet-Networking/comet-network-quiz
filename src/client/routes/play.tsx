@@ -6,11 +6,8 @@ export const Route = createFileRoute('/play')({ component: PlayPage });
 export function PlayPage() {
   return (
     <Stack>
-      <Title order={2}>Player placeholder</Title>
-      <Text>
-        Add the player flow here after the game protocol and server rules are
-        defined. Joining and answering are not available yet.
-      </Text>
+      <Title order={2}>Join a quiz</Title>
+      <Text>Joining is not available yet.</Text>
     </Stack>
   );
 }
