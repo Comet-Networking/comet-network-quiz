@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=https://render.com/schema/render.yaml.json
+services:
+  - type: web
+    name: comet-network-quiz
+    runtime: node
+    plan: free
+    branch: main
+    autoDeployTrigger: checksPass
+    buildCommand: bun install --frozen-lockfile && bun run build
+    startCommand: bun run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production

@@ -1,0 +1,13 @@
+{
+  "$schema": "./quiz.schema.json",
+  "id": "format-example",
+  "title": "Format example (not loaded)",
+  "questions": [
+    {
+      "id": "q1",
+      "prompt": "Which protocol does this scaffold use for persistent messages?",
+      "choices": ["WebSocket", "SMTP", "FTP", "DNS"],
+      "correctChoice": 0
+    }
+  ]
+}
