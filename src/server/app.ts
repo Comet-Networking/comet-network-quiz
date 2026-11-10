@@ -26,7 +26,7 @@ function createApi() {
     });
 }
 
-// No listener or game state here: this factory is usable in tests and Eden types.
+// No listener or game state here: production composes this app and Eden derives its types.
 export function createApp() {
   const app = new Elysia({ websocket: { maxPayloadLength: 1024 } });
   return app.group('/api', (api) => api.use(createApi()));

@@ -7,4 +7,4 @@ about: Propose a small piece of the MVP
 
 ## Acceptance criteria
 
-## Protocol, tests, and report impact
+## Protocol and report impact

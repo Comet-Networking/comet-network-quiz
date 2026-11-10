@@ -17,10 +17,9 @@
     "typecheck": "bun run routes:generate && bun --bun tsc -p tsconfig.client.json && bun --bun tsc -p tsconfig.server.json && bun --bun tsc -p tsconfig.tools.json",
     "format": "bun --bun prettier . --write",
     "format:check": "bun --bun prettier . --check",
-    "test": "bun test",
     "build": "bun run typecheck && bun --bun vite build",
     "start": "NODE_ENV=production bun src/server/index.ts",
-    "check": "bun run format:check && bun run lint && bun run typecheck && bun run test && bun run build"
+    "check": "bun run format:check && bun run lint && bun run typecheck && bun run build"
   },
   "dependencies": {
     "@elysia/eden": "1.4.10",

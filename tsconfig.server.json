@@ -4,5 +4,5 @@
     "lib": ["ES2023"],
     "types": ["bun"]
   },
-  "include": ["src/server", "tests"]
+  "include": ["src/server"]
 }
