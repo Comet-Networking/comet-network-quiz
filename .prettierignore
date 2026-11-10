@@ -1,0 +1,8 @@
+node_modules/
+dist/
+bun.lock
+.tanstack/
+.cache/
+coverage/
+src/client/routeTree.gen.ts
+LICENSE
