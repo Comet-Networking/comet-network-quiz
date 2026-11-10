@@ -3,6 +3,12 @@ import { Elysia, t } from 'elysia';
 function createApi() {
   return new Elysia()
     .get('/health', () => ({ status: 'ok' as const }))
+    .post('/echo', ({ body }) => ({ message: body.message }), {
+      body: t.Object(
+        { message: t.String({ minLength: 1, maxLength: 200 }) },
+        { additionalProperties: false },
+      ),
+    })
     .ws('/ws', {
       // Application JSON, separate from WebSocket control-frame ping/pong.
       // Expand these public schemas before adding handlers; never send answer keys.
