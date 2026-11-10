@@ -1,10 +1,9 @@
 import { Elysia, t } from 'elysia';
 
-// No listener or game state here: this factory is usable in tests and Eden types.
-export function createApp() {
-  return new Elysia({ websocket: { maxPayloadLength: 1024 } })
-    .get('/api/health', () => ({ status: 'ok' as const }))
-    .ws('/api/ws', {
+function createApi() {
+  return new Elysia()
+    .get('/health', () => ({ status: 'ok' as const }))
+    .ws('/ws', {
       // Application JSON, separate from WebSocket control-frame ping/pong.
       // Expand these public schemas before adding handlers; never send answer keys.
       body: t.Object(
@@ -25,6 +24,12 @@ export function createApp() {
         socket.send({ type: 'pong', requestId: message.requestId });
       },
     });
+}
+
+// No listener or game state here: this factory is usable in tests and Eden types.
+export function createApp() {
+  const app = new Elysia({ websocket: { maxPayloadLength: 1024 } });
+  return app.group('/api', (api) => api.use(createApi()));
 }
 
 export type App = ReturnType<typeof createApp>;
