@@ -43,7 +43,7 @@ export function HostPage() {
         ) : (
           <Stack gap={4}>
             {addresses.map((ip) => (
-              <Code key={ip}>{`http://${ip}${port}/play`}</Code>
+              <Code key={ip}>{`http://${ip}${port}/test`}</Code>
             ))}
           </Stack>
         )}
