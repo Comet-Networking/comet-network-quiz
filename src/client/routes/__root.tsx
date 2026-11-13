@@ -20,6 +20,7 @@ export function Layout() {
             <Link to="/">Home</Link>
             <Link to="/host">Host</Link>
             <Link to="/play">Play</Link>
+            <Link to="/test">Test</Link>
           </Group>
         </header>
         <main>
