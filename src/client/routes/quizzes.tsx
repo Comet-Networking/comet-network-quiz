@@ -15,18 +15,18 @@ import { useState } from 'react';
 
 export const Route = createFileRoute('/quizzes')({ component: QuizzesPage });
 
-type QuizQuestion = {
+interface QuizQuestion {
   id: string;
   prompt: string;
   choices: string[];
   correctChoice: number;
-};
+}
 
-type Quiz = {
+interface Quiz {
   id: string;
   title: string;
   questions: QuizQuestion[];
-};
+}
 
 const STORAGE_KEY = 'comet-network-quiz:custom-quizzes';
 
@@ -134,7 +134,7 @@ export function QuizzesPage() {
     saveQuizzes([quiz, ...savedQuizzes]);
     setTitle('');
     setQuestions([blankQuestion()]);
-    setMessage('Quiz saved on this device. Export it to share the file.');
+    setMessage('Quiz saved on this device.');
   }
 
   async function importQuiz(file: File | null) {
@@ -168,7 +168,9 @@ export function QuizzesPage() {
         placeholder="For example, Network Basics"
         value={title}
         maxLength={100}
-        onChange={(event) => setTitle(event.currentTarget.value)}
+        onChange={(event) => {
+          setTitle(event.currentTarget.value);
+        }}
       />
       {questions.map((question, questionIndex) => (
         <Card key={question.id} withBorder>
@@ -177,37 +179,37 @@ export function QuizzesPage() {
             <TextInput
               label="Question"
               value={question.prompt}
-              onChange={(event) =>
+              onChange={(event) => {
                 updateQuestion(questionIndex, {
                   prompt: event.currentTarget.value,
-                })
-              }
+                });
+              }}
             />
             <Radio.Group
               label="Answer choices — select the correct answer"
               value={String(question.correctChoice)}
-              onChange={(value) =>
-                updateQuestion(questionIndex, { correctChoice: Number(value) })
-              }
+              onChange={(value) => {
+                updateQuestion(questionIndex, { correctChoice: Number(value) });
+              }}
             >
               <Stack gap="xs" mt="xs">
                 {question.choices.map((choice, choiceIndex) => (
                   <Group key={choiceIndex} wrap="nowrap" align="end">
                     <Radio
                       value={String(choiceIndex)}
-                      aria-label={`Mark choice ${choiceIndex + 1} as correct`}
+                      aria-label={`Mark choice ${String(choiceIndex + 1)} as correct`}
                     />
                     <TextInput
                       style={{ flex: 1 }}
                       label={`Choice ${String.fromCharCode(65 + choiceIndex)}`}
                       value={choice}
-                      onChange={(event) =>
+                      onChange={(event) => {
                         updateChoice(
                           questionIndex,
                           choiceIndex,
                           event.currentTarget.value,
-                        )
-                      }
+                        );
+                      }}
                     />
                   </Group>
                 ))}
@@ -217,11 +219,11 @@ export function QuizzesPage() {
               <Button
                 variant="subtle"
                 color="red"
-                onClick={() =>
+                onClick={() => {
                   setQuestions((current) =>
                     current.filter((_, index) => index !== questionIndex),
-                  )
-                }
+                  );
+                }}
               >
                 Remove question
               </Button>
@@ -232,7 +234,9 @@ export function QuizzesPage() {
       <Group>
         <Button
           variant="default"
-          onClick={() => setQuestions([...questions, blankQuestion()])}
+          onClick={() => {
+            setQuestions([...questions, blankQuestion()]);
+          }}
         >
           Add question
         </Button>
@@ -242,7 +246,13 @@ export function QuizzesPage() {
         label="Upload a quiz file"
         description="Import a quiz JSON file."
         accept=".json,application/json"
-        onChange={importQuiz}
+        onChange={(file) => {
+          void importQuiz(file).catch(() => {
+            setMessage(
+              'Could not read that file. Choose a valid quiz JSON file.',
+            );
+          });
+        }}
         clearable
       />
       {message && <Text role="status">{message}</Text>}
@@ -264,11 +274,11 @@ export function QuizzesPage() {
               <Button
                 variant="subtle"
                 color="red"
-                onClick={() =>
+                onClick={() => {
                   saveQuizzes(
                     savedQuizzes.filter((saved) => saved.id !== quiz.id),
-                  )
-                }
+                  );
+                }}
               >
                 Delete
               </Button>
@@ -278,8 +288,8 @@ export function QuizzesPage() {
       )}
       <Text size="sm" c="dimmed">
         Each question stores the correct choice as <Code>correctChoice</Code>,
-        matching the project quiz schema. Quizzes are saved in this browser and
-        You can import a quiz JSON file if you already have one.
+        matching the project quiz schema. Quizzes are saved in this browser. You
+        can import a quiz JSON file if you already have one.
       </Text>
     </Stack>
   );
