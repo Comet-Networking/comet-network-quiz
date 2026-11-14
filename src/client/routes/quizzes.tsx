@@ -72,18 +72,6 @@ function isQuiz(value: unknown): value is Quiz {
   );
 }
 
-function downloadQuiz(quiz: Quiz) {
-  const file = new Blob([JSON.stringify(quiz, null, 2)], {
-    type: 'application/json',
-  });
-  const url = URL.createObjectURL(file);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `${quiz.id}.json`;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
 export function QuizzesPage() {
   const [title, setTitle] = useState('');
   const [questions, setQuestions] = useState<QuizQuestion[]>([blankQuestion()]);
@@ -252,7 +240,7 @@ export function QuizzesPage() {
       </Group>
       <FileInput
         label="Upload a quiz file"
-        description="Import a quiz JSON file exported from this page."
+        description="Import a quiz JSON file."
         accept=".json,application/json"
         onChange={importQuiz}
         clearable
@@ -273,22 +261,17 @@ export function QuizzesPage() {
                   {quiz.questions.length === 1 ? '' : 's'}
                 </Text>
               </Stack>
-              <Group>
-                <Button variant="default" onClick={() => downloadQuiz(quiz)}>
-                  Export JSON
-                </Button>
-                <Button
-                  variant="subtle"
-                  color="red"
-                  onClick={() =>
-                    saveQuizzes(
-                      savedQuizzes.filter((saved) => saved.id !== quiz.id),
-                    )
-                  }
-                >
-                  Delete
-                </Button>
-              </Group>
+              <Button
+                variant="subtle"
+                color="red"
+                onClick={() =>
+                  saveQuizzes(
+                    savedQuizzes.filter((saved) => saved.id !== quiz.id),
+                  )
+                }
+              >
+                Delete
+              </Button>
             </Group>
           </Card>
         ))
@@ -296,7 +279,7 @@ export function QuizzesPage() {
       <Text size="sm" c="dimmed">
         Each question stores the correct choice as <Code>correctChoice</Code>,
         matching the project quiz schema. Quizzes are saved in this browser and
-        can be shared as JSON files.
+        You can import a quiz JSON file if you already have one.
       </Text>
     </Stack>
   );
