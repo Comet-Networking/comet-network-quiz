@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-export function useSocket(onMessage: (msg: any) => void) {
+export function useSocket<T>(onMessage: (msg: T) => void) {
   const wsRef = useRef<WebSocket | null>(null);
   const handler = useRef(onMessage);
   handler.current = onMessage; // always call the latest callback
@@ -16,12 +16,12 @@ export function useSocket(onMessage: (msg: any) => void) {
       // so it works from a phone with no hardcoded IP.
       const ws = new WebSocket(`${proto}://${location.host}/api/ws`);
       wsRef.current = ws;
-      ws.onopen = () => setConnected(true);
+      ws.onopen = () => {setConnected(true)};
       ws.onclose = () => {
         setConnected(false);
         if (!stopped) retry = setTimeout(connect, 1000); // auto-reconnect
       };
-      ws.onmessage = (e) => handler.current(JSON.parse(e.data));
+      ws.onmessage = (e) => handler.current(JSON.parse(e.data) as T);
     };
 
     connect();

@@ -15,21 +15,21 @@ import { useSocket } from '../useSocket'; // adjust the path to wherever you put
 
 export const Route = createFileRoute('/host')({ component: HostPage });
 
-type Said = { type: 'said'; name: string; text: string; at: number };
+interface Said { type: 'said'; name: string; text: string; at: number };
 
 export function HostPage() {
   const [addresses, setAddresses] = useState<string[]>([]);
   const [log, setLog] = useState<Said[]>([]);
 
-  const { connected } = useSocket((msg) => {
+  const { connected } = useSocket<Said>((msg) => {
     if (msg.type === 'said') setLog((l) => [...l, msg]);
   });
 
   useEffect(() => {
     fetch('/api/info')
       .then((r) => r.json())
-      .then((d: { addresses: string[] }) => setAddresses(d.addresses))
-      .catch(() => setAddresses([]));
+      .then((d: { addresses: string[] }) => {setAddresses(d.addresses)})
+      .catch(() => {setAddresses([])});
   }, []);
 
   const port = location.port ? `:${location.port}` : '';
