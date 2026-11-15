@@ -1,5 +1,7 @@
 import { Elysia, t } from 'elysia';
 
+import { createLobby } from './lobbies';
+
 function createApi() {
   return new Elysia()
     .get('/health', () => ({ status: 'ok' as const }))
@@ -12,22 +14,39 @@ function createApi() {
     .ws('/ws', {
       // Application JSON, separate from WebSocket control-frame ping/pong.
       // Expand these public schemas before adding handlers; never send answer keys.
-      body: t.Object(
-        {
-          type: t.Literal('ping'),
-          requestId: t.String({ minLength: 1, maxLength: 64 }),
-        },
-        { additionalProperties: false },
-      ),
-      response: t.Object(
-        {
-          type: t.Literal('pong'),
-          requestId: t.String({ minLength: 1, maxLength: 64 }),
-        },
-        { additionalProperties: false },
-      ),
+      body: t.Union([
+        t.Object(
+          {
+            type: t.Literal('ping'),
+            requestId: t.String({ minLength: 1, maxLength: 64 }),
+          },
+          { additionalProperties: false },
+        ),
+        t.Object(
+          { type: t.Literal('create-lobby') },
+          { additionalProperties: false },
+        ),
+      ]),
+      response: t.Union([
+        t.Object(
+          {
+            type: t.Literal('pong'),
+            requestId: t.String({ minLength: 1, maxLength: 64 }),
+          },
+          { additionalProperties: false },
+        ),
+        t.Object(
+          { type: t.Literal('lobby-created'), code: t.String() },
+          { additionalProperties: false },
+        ),
+      ]),
       message(socket, message) {
-        socket.send({ type: 'pong', requestId: message.requestId });
+        if (message.type === 'ping') {
+          socket.send({ type: 'pong', requestId: message.requestId });
+        } else {
+          const lobby = createLobby();
+          socket.send({ type: 'lobby-created', code: lobby.code });
+        }
       },
     });
 }
