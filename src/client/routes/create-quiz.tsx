@@ -25,6 +25,8 @@ export function CreateQuizPage() {
   const [quizId, setQuizId] = useState('');
   const [title, setTitle] = useState('');
   const [adminKey, setAdminKey] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
   const [questions, setQuestions] = useState<Question[]>([
     {
       id: 'q1',
@@ -51,10 +53,19 @@ export function CreateQuizPage() {
           question.choices.some((choice) => !choice.trim()),
       )
     ) {
-      alert('Please complete all fields before saving.');
+      setMessage('Please complete all fields before saving.');
       return;
     }
 
+    if (saving) return;
+    if (!/^[a-zA-Z0-9_-]+$/.test(quizId.trim())) {
+      setMessage(
+        'Use letters, numbers, hyphens, or underscores for the quiz ID.',
+      );
+      return;
+    }
+    setSaving(true);
+    setMessage('');
     try {
       const response = await fetch('/api/quizzes', {
         method: 'POST',
@@ -63,28 +74,35 @@ export function CreateQuizPage() {
           'x-quiz-admin-key': adminKey,
         },
         body: JSON.stringify({
-          id: quizId,
-          title,
-          questions,
+          id: quizId.trim(),
+          title: title.trim(),
+          questions: questions.map((question) => ({
+            ...question,
+            prompt: question.prompt.trim(),
+            choices: question.choices.map((choice) => choice.trim()),
+          })),
         }),
       });
 
       if (response.ok) {
-        alert('Quiz saved successfully!');
+        setMessage('Quiz saved successfully!');
       } else {
-        alert(
-          `Failed to save quiz. Server returned ${String(response.status)}.`,
+        const result = (await response.json()) as { error?: string };
+        setMessage(
+          result.error ?? `Failed to save quiz (${String(response.status)}).`,
         );
       }
     } catch {
-      alert('Could not connect to the server.');
+      setMessage('Could not connect to the server.');
+    } finally {
+      setSaving(false);
     }
   }
 
   return (
     <Stack gap="md">
       <Title order={2}>Create Quiz</Title>
-      <Text>Create a new quiz by adding questions and answers.</Text>
+      <Text>Create a quiz on the server by adding questions and answers.</Text>
 
       <TextInput
         label="Quiz ID"
@@ -204,14 +222,16 @@ export function CreateQuizPage() {
 
       <Button
         color="green"
+        loading={saving}
         onClick={() => {
           saveQuiz().catch(() => {
-            alert('Could not save quiz.');
+            setMessage('Could not save quiz.');
           });
         }}
       >
         Save Quiz
       </Button>
+      {message && <Text role="status">{message}</Text>}
     </Stack>
   );
 }

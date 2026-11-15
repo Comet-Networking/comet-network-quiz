@@ -1,12 +1,12 @@
 import { Elysia, t } from 'elysia';
-import { loadQuiz, saveQuiz, updateQuiz } from './quizzes';
-
-function canEditQuiz(request: Request): boolean {
-  return request.headers.get('x-quiz-admin-key') === 'comet-quiz-admin';
-}
-
 import { createLobby } from './lobbies';
 import { lanAddresses } from './network';
+import { loadQuiz, QuizError, saveQuiz, updateQuiz } from './quizzes';
+
+function canEditQuiz(request: Request): boolean {
+  const key = process.env['QUIZ_ADMIN_KEY'];
+  return Boolean(key) && request.headers.get('x-quiz-admin-key') === key;
+}
 
 const strict = { additionalProperties: false } as const;
 const Id = t.String({ minLength: 1, maxLength: 64 });
@@ -16,14 +16,17 @@ const Said = t.Object({ type: t.Literal('said'), text: t.String() }, strict);
 
 function createApi() {
   return new Elysia()
+    .onError(({ error, set }) => {
+      if (error instanceof QuizError) {
+        set.status = error.status;
+        return { error: error.message };
+      }
+      return undefined;
+    })
     .get('/health', () => ({ status: 'ok' as const }))
     .get('/info', () => ({ addresses: lanAddresses() }))
     .get('/quizzes/:id/info', async ({ params }) => {
-      const quiz = (await loadQuiz(params.id)) as {
-        id: string;
-        title: string;
-        questions: unknown[];
-      };
+      const quiz = await loadQuiz(params.id);
 
       return {
         id: quiz.id,
