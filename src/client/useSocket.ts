@@ -48,7 +48,8 @@ export function useSocket(onMessage: (msg: unknown) => void) {
         if (!stopped) retry = setTimeout(connect, 1000); // auto-reconnect
       };
       ws.onmessage = (e) => {
-        handler.current(JSON.parse(e.data));
+        if (typeof e.data !== 'string') return;
+        handler.current(JSON.parse(e.data) as unknown);
       };
     };
 
