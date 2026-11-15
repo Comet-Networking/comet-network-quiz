@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 const MESSAGE_TYPES = ['said', 'pong'] as const;
-export type messageTypes = {
+export interface messageTypes {
   type: 'said';
   name: string;
   text: string;
   at: number;
-};
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -47,7 +47,9 @@ export function useSocket(onMessage: (msg: unknown) => void) {
         setConnected(false);
         if (!stopped) retry = setTimeout(connect, 1000); // auto-reconnect
       };
-      ws.onmessage = (e) => handler.current(JSON.parse(e.data));
+      ws.onmessage = (e) => {
+        handler.current(JSON.parse(e.data));
+      };
     };
 
     connect();

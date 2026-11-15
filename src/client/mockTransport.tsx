@@ -33,7 +33,9 @@ export function createMockTransport(): Transport {
   const listeners = new Set<(m: ServerMessage) => void>();
   const emit = (m: ServerMessage) => {
     {
-      listeners.forEach((l) => l(m));
+      listeners.forEach((l) => {
+        l(m);
+      });
     }
   };
 
