@@ -11,7 +11,7 @@ import {
   Title,
 } from '@mantine/core';
 import { createFileRoute } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 export const Route = createFileRoute('/quizzes')({ component: QuizzesPage });
 
@@ -55,20 +55,30 @@ function isQuiz(value: unknown): value is Quiz {
   const quiz = value as Partial<Quiz>;
   return (
     typeof quiz.id === 'string' &&
+    quiz.id.length > 0 &&
     typeof quiz.title === 'string' &&
+    quiz.title.length > 0 &&
     Array.isArray(quiz.questions) &&
     quiz.questions.length > 0 &&
-    quiz.questions.every(
-      (question) =>
+    quiz.questions.every((value: unknown) => {
+      if (!value || typeof value !== 'object') return false;
+      const question = value as Partial<QuizQuestion>;
+      return (
         typeof question.id === 'string' &&
+        question.id.length > 0 &&
         typeof question.prompt === 'string' &&
+        question.prompt.length > 0 &&
         Array.isArray(question.choices) &&
         question.choices.length === 4 &&
-        question.choices.every((choice) => typeof choice === 'string') &&
+        question.choices.every(
+          (choice) => typeof choice === 'string' && choice.length > 0,
+        ) &&
+        typeof question.correctChoice === 'number' &&
         Number.isInteger(question.correctChoice) &&
         question.correctChoice >= 0 &&
-        question.correctChoice <= 3,
-    )
+        question.correctChoice <= 3
+      );
+    })
   );
 }
 
@@ -76,11 +86,22 @@ export function QuizzesPage() {
   const [title, setTitle] = useState('');
   const [questions, setQuestions] = useState<QuizQuestion[]>([blankQuestion()]);
   const [savedQuizzes, setSavedQuizzes] = useState<Quiz[]>(readSavedQuizzes);
+  const savedQuizzesRef = useRef(savedQuizzes);
   const [message, setMessage] = useState('');
 
-  function saveQuizzes(nextQuizzes: Quiz[]) {
+  function saveQuizzes(update: (current: Quiz[]) => Quiz[]): boolean {
+    const nextQuizzes = update(savedQuizzesRef.current);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextQuizzes));
+    } catch {
+      setMessage(
+        'Could not save quizzes on this device. Your changes were kept.',
+      );
+      return false;
+    }
+    savedQuizzesRef.current = nextQuizzes;
     setSavedQuizzes(nextQuizzes);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextQuizzes));
+    return true;
   }
 
   function updateQuestion(index: number, update: Partial<QuizQuestion>) {
@@ -131,7 +152,7 @@ export function QuizzesPage() {
         choices: question.choices.map((choice) => choice.trim()),
       })),
     };
-    saveQuizzes([quiz, ...savedQuizzes]);
+    if (!saveQuizzes((current) => [quiz, ...current])) return;
     setTitle('');
     setQuestions([blankQuestion()]);
     setMessage('Quiz saved on this device.');
@@ -145,12 +166,11 @@ export function QuizzesPage() {
         setMessage('That file does not match the quiz format.');
         return;
       }
-      const nextQuizzes = [
+      const saved = saveQuizzes((current) => [
         imported,
-        ...savedQuizzes.filter((quiz) => quiz.id !== imported.id),
-      ];
-      saveQuizzes(nextQuizzes);
-      setMessage(`Imported “${imported.title}”.`);
+        ...current.filter((quiz) => quiz.id !== imported.id),
+      ]);
+      if (saved) setMessage(`Imported “${imported.title}”.`);
     } catch {
       setMessage('Could not read that file. Choose a valid quiz JSON file.');
     }
@@ -275,8 +295,8 @@ export function QuizzesPage() {
                 variant="subtle"
                 color="red"
                 onClick={() => {
-                  saveQuizzes(
-                    savedQuizzes.filter((saved) => saved.id !== quiz.id),
+                  saveQuizzes((current) =>
+                    current.filter((saved) => saved.id !== quiz.id),
                   );
                 }}
               >
