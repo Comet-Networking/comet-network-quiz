@@ -1,10 +1,18 @@
 import { Elysia, t } from 'elysia';
 
 import { createLobby } from './lobbies';
+import { lanAddresses } from './network';
+
+const strict = { additionalProperties: false } as const;
+const Id = t.String({ minLength: 1, maxLength: 64 });
+
+const Pong = t.Object({ type: t.Literal('pong'), requestId: Id }, strict);
+const Said = t.Object({ type: t.Literal('said'), text: t.String() }, strict);
 
 function createApi() {
   return new Elysia()
     .get('/health', () => ({ status: 'ok' as const }))
+    .get('/info', () => ({ addresses: lanAddresses() }))
     .post('/echo', ({ body }) => ({ message: body.message }), {
       body: t.Object(
         { message: t.String({ minLength: 1, maxLength: 200 }) },
@@ -12,41 +20,44 @@ function createApi() {
       ),
     })
     .ws('/ws', {
-      // Application JSON, separate from WebSocket control-frame ping/pong.
-      // Expand these public schemas before adding handlers; never send answer keys.
       body: t.Union([
+        t.Object({ type: t.Literal('ping'), requestId: Id }, strict),
+        t.Object({ type: t.Literal('create-lobby') }, strict),
         t.Object(
           {
-            type: t.Literal('ping'),
-            requestId: t.String({ minLength: 1, maxLength: 64 }),
+            type: t.Literal('say'),
+            text: t.String({ minLength: 1, maxLength: 200 }),
           },
-          { additionalProperties: false },
-        ),
-        t.Object(
-          { type: t.Literal('create-lobby') },
-          { additionalProperties: false },
+          strict,
         ),
       ]),
       response: t.Union([
-        t.Object(
-          {
-            type: t.Literal('pong'),
-            requestId: t.String({ minLength: 1, maxLength: 64 }),
-          },
-          { additionalProperties: false },
-        ),
+        Pong,
+        Said,
         t.Object(
           { type: t.Literal('lobby-created'), code: t.String() },
-          { additionalProperties: false },
+          strict,
         ),
       ]),
+      open(socket) {
+        socket.subscribe('lobby');
+      },
       message(socket, message) {
         if (message.type === 'ping') {
           socket.send({ type: 'pong', requestId: message.requestId });
-        } else {
+          return;
+        }
+        if (message.type === 'create-lobby') {
           const lobby = createLobby();
           socket.send({ type: 'lobby-created', code: lobby.code });
+          return;
         }
+        const out = {
+          type: 'said' as const,
+          text: message.text,
+        };
+        socket.send(out);
+        socket.publish('lobby', out);
       },
     });
 }
