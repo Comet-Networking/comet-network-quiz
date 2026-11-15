@@ -1,6 +1,6 @@
-import type { PlayerQuestion } from "./routes/play";
-import type { Transport } from "./routes/play";
-import type { ServerMessage } from "./routes/play";
+import type { PlayerQuestion } from './routes/play';
+import type { Transport } from './routes/play';
+import type { ServerMessage } from './routes/play';
 
 // Replace with a WebSocket / socket.io implementation of `Transport`.
 export function createMockTransport(): Transport {
@@ -31,7 +31,9 @@ export function createMockTransport(): Transport {
   ];
   const DURATION = 10_000;
   const listeners = new Set<(m: ServerMessage) => void>();
-  const emit = (m: ServerMessage) => {listeners.forEach((l) => l(m))};
+  const emit = (m: ServerMessage) => {
+    listeners.forEach((l) => l(m));
+  };
 
   let score = 0;
   let current = -1;
@@ -79,7 +81,7 @@ export function createMockTransport(): Transport {
       type: 'question',
       index: current,
       total: quiz.length,
-      question: {id, prompt, choices} as PlayerQuestion,
+      question: { id, prompt, choices } as PlayerQuestion,
       endsAt: Date.now() + DURATION,
       durationMs: DURATION,
     });
@@ -99,7 +101,9 @@ export function createMockTransport(): Transport {
     //processing the received messages
     send(msg) {
       if (msg.type === 'join') {
-        setTimeout(() => {emit({ type: 'lobby' })}, 300);
+        setTimeout(() => {
+          emit({ type: 'lobby' });
+        }, 300);
         setTimeout(next, 2500);
       } else if (!answer) {
         answer = { choice: msg.choice, at: 0 };

@@ -16,7 +16,10 @@ import { useSocket } from '../useSocket'; // adjust to wherever you put the hook
 
 export const Route = createFileRoute('/test')({ component: TestPage });
 
-interface Said { type: 'said'; text: string };
+interface Said {
+  type: 'said';
+  text: string;
+}
 
 export function TestPage() {
   const [text, setText] = useState('');
@@ -48,7 +51,9 @@ export function TestPage() {
                 placeholder="Message"
                 value={text}
                 maxLength={200}
-                onChange={(e) => {setText(e.currentTarget.value)}}
+                onChange={(e) => {
+                  setText(e.currentTarget.value);
+                }}
               />
               <Button type="submit" disabled={!connected}>
                 Send

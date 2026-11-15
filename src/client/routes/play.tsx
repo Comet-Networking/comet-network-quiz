@@ -19,7 +19,7 @@ export interface PlayerQuestion {
   id: string;
   prompt: string;
   choices: [string, string, string, string];
-};
+}
 
 //structure for host to client messages
 export type ServerMessage =
@@ -99,12 +99,34 @@ export function PlayerView({ transport }: { transport: Transport }) {
               return { name: 'join', error: msg.message };
             case 'question': {
               const { index, total, question, endsAt, durationMs } = msg;
-              return { name: 'question', answer: null, index, total, question, endsAt, durationMs };
+              return {
+                name: 'question',
+                answer: null,
+                index,
+                total,
+                question,
+                endsAt,
+                durationMs,
+              };
             }
             case 'reveal': {
               if (prev.name !== 'question') return prev;
-              const { correctChoice, yourChoice, correct, pointsEarned, score } = msg;
-              return { name: 'reveal', question: prev.question, correctChoice, yourChoice, correct, pointsEarned, score };
+              const {
+                correctChoice,
+                yourChoice,
+                correct,
+                pointsEarned,
+                score,
+              } = msg;
+              return {
+                name: 'reveal',
+                question: prev.question,
+                correctChoice,
+                yourChoice,
+                correct,
+                pointsEarned,
+                score,
+              };
             }
             case 'finished': {
               const { score, rank, players } = msg;
@@ -170,7 +192,9 @@ function JoinScreen({
             inputMode="numeric"
             size="md"
             value={pin}
-            onChange={(e) => {setPin(e.currentTarget.value)}}
+            onChange={(e) => {
+              setPin(e.currentTarget.value);
+            }}
             error={error}
           />
           <TextInput
@@ -178,15 +202,19 @@ function JoinScreen({
             size="md"
             maxLength={20}
             value={name}
-            onChange={(e) => {setName(e.currentTarget.value)}}
-            onKeyDown={(e) =>
-              {e.key === 'Enter' && ready && onJoin(pin.trim(), name.trim())}
-            }
+            onChange={(e) => {
+              setName(e.currentTarget.value);
+            }}
+            onKeyDown={(e) => {
+              e.key === 'Enter' && ready && onJoin(pin.trim(), name.trim());
+            }}
           />
           <Button
             size="lg"
             disabled={!ready}
-            onClick={() => {onJoin(pin.trim(), name.trim())}}
+            onClick={() => {
+              onJoin(pin.trim(), name.trim());
+            }}
           >
             Join game
           </Button>
@@ -214,11 +242,14 @@ function LobbyScreen({ playerName }: { playerName: string }) {
 function useRemaining(endsAt: number, durationMs: number) {
   const [pct, setPct] = useState(100);
   useEffect(() => {
-    const tick = () =>
-      {setPct(Math.max(0, ((endsAt - Date.now()) / durationMs) * 100))};
+    const tick = () => {
+      setPct(Math.max(0, ((endsAt - Date.now()) / durationMs) * 100));
+    };
     tick();
     const id = setInterval(tick, 100);
-    return () => {clearInterval(id)};
+    return () => {
+      clearInterval(id);
+    };
   }, [endsAt, durationMs]);
   return pct;
 }
@@ -270,7 +301,9 @@ function QuestionScreen({
               radius="md"
               disabled={locked && !picked}
               variant={picked || !locked ? 'filled' : 'light'}
-              onClick={() => {onAnswer(i)}}
+              onClick={() => {
+                onAnswer(i);
+              }}
               leftSection={<span aria-hidden>{SHAPES[i]}</span>}
               styles={{
                 label: {

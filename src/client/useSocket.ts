@@ -16,7 +16,9 @@ export function useSocket<T>(onMessage: (msg: T) => void) {
       // so it works from a phone with no hardcoded IP.
       const ws = new WebSocket(`${proto}://${location.host}/api/ws`);
       wsRef.current = ws;
-      ws.onopen = () => {setConnected(true)};
+      ws.onopen = () => {
+        setConnected(true);
+      };
       ws.onclose = () => {
         setConnected(false);
         if (!stopped) retry = setTimeout(connect, 1000); // auto-reconnect

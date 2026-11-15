@@ -15,7 +15,12 @@ import { useSocket } from '../useSocket'; // adjust the path to wherever you put
 
 export const Route = createFileRoute('/host')({ component: HostPage });
 
-interface Said { type: 'said'; name: string; text: string; at: number };
+interface Said {
+  type: 'said';
+  name: string;
+  text: string;
+  at: number;
+}
 
 export function HostPage() {
   const [addresses, setAddresses] = useState<string[]>([]);
@@ -28,8 +33,12 @@ export function HostPage() {
   useEffect(() => {
     fetch('/api/info')
       .then((r) => r.json())
-      .then((d: { addresses: string[] }) => {setAddresses(d.addresses)})
-      .catch(() => {setAddresses([])});
+      .then((d: { addresses: string[] }) => {
+        setAddresses(d.addresses);
+      })
+      .catch(() => {
+        setAddresses([]);
+      });
   }, []);
 
   const port = location.port ? `:${location.port}` : '';
