@@ -51,7 +51,10 @@ export async function saveQuiz(quiz: unknown): Promise<void> {
   await Bun.write(file, yaml);
 }
 
-export async function updateQuiz(filename: string, quiz: unknown): Promise<void> {
+export async function updateQuiz(
+  filename: string,
+  quiz: unknown,
+): Promise<void> {
   if (!/^[a-zA-Z0-9_-]+$/.test(filename)) {
     throw new Error('Invalid quiz filename');
   }

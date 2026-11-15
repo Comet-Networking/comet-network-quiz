@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { Button, PasswordInput, Radio, Stack, Text, TextInput, Title } from '@mantine/core';
+import {
+  Button,
+  PasswordInput,
+  Radio,
+  Stack,
+  Text,
+  TextInput,
+  Title,
+} from '@mantine/core';
 import { createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/create-quiz')({
@@ -28,7 +36,7 @@ export function CreateQuizPage() {
 
   function updateQuestion(index: number, updated: Question) {
     setQuestions((current) =>
-      current.map((question, i) => (i === index ? updated : question))
+      current.map((question, i) => (i === index ? updated : question)),
     );
   }
 
@@ -40,7 +48,7 @@ export function CreateQuizPage() {
       questions.some(
         (question) =>
           !question.prompt.trim() ||
-          question.choices.some((choice) => !choice.trim())
+          question.choices.some((choice) => !choice.trim()),
       )
     ) {
       alert('Please complete all fields before saving.');
@@ -64,7 +72,9 @@ export function CreateQuizPage() {
       if (response.ok) {
         alert('Quiz saved successfully!');
       } else {
-        alert(`Failed to save quiz. Server returned ${String(response.status)}.`);
+        alert(
+          `Failed to save quiz. Server returned ${String(response.status)}.`,
+        );
       }
     } catch {
       alert('Could not connect to the server.');
@@ -167,7 +177,7 @@ export function CreateQuizPage() {
                   .map((item, i) => ({
                     ...item,
                     id: `q${String(i + 1)}`,
-                  }))
+                  })),
               );
             }}
           >

@@ -31,28 +31,36 @@ function createApi() {
         questionCount: quiz.questions.length,
       };
     })
-    .post('/quizzes', async ({ request, body, set }) => {
-      if (!canEditQuiz(request)) {
-        set.status = 403;
-        return { error: 'Not authorized' };
-      }
+    .post(
+      '/quizzes',
+      async ({ request, body, set }) => {
+        if (!canEditQuiz(request)) {
+          set.status = 403;
+          return { error: 'Not authorized' };
+        }
 
-      await saveQuiz(body);
-      return { success: true };
-    }, {
-      body: t.Unknown(),
-    })
-    .put('/quizzes/:id', async ({ request, params, body, set }) => {
-      if (!canEditQuiz(request)) {
-        set.status = 403;
-        return { error: 'Not authorized' };
-      }
+        await saveQuiz(body);
+        return { success: true };
+      },
+      {
+        body: t.Unknown(),
+      },
+    )
+    .put(
+      '/quizzes/:id',
+      async ({ request, params, body, set }) => {
+        if (!canEditQuiz(request)) {
+          set.status = 403;
+          return { error: 'Not authorized' };
+        }
 
-      await updateQuiz(params.id, body);
-      return { success: true };
-    }, {
-      body: t.Unknown(),
-    })
+        await updateQuiz(params.id, body);
+        return { success: true };
+      },
+      {
+        body: t.Unknown(),
+      },
+    )
     .post('/echo', ({ body }) => ({ message: body.message }), {
       body: t.Object(
         { message: t.String({ minLength: 1, maxLength: 200 }) },
