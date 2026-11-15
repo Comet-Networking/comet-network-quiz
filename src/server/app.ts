@@ -1,7 +1,12 @@
 import { Elysia, t } from 'elysia';
-
 import { createLobby } from './lobbies';
 import { lanAddresses } from './network';
+import { loadQuiz, QuizError, saveQuiz, updateQuiz } from './quizzes';
+
+function canEditQuiz(request: Request): boolean {
+  const key = process.env['QUIZ_ADMIN_KEY'];
+  return Boolean(key) && request.headers.get('x-quiz-admin-key') === key;
+}
 
 const strict = { additionalProperties: false } as const;
 const Id = t.String({ minLength: 1, maxLength: 64 });
@@ -11,8 +16,54 @@ const Said = t.Object({ type: t.Literal('said'), text: t.String() }, strict);
 
 function createApi() {
   return new Elysia()
+    .onError(({ error, set }) => {
+      if (error instanceof QuizError) {
+        set.status = error.status;
+        return { error: error.message };
+      }
+      return undefined;
+    })
     .get('/health', () => ({ status: 'ok' as const }))
     .get('/info', () => ({ addresses: lanAddresses() }))
+    .get('/quizzes/:id/info', async ({ params }) => {
+      const quiz = await loadQuiz(params.id);
+
+      return {
+        id: quiz.id,
+        title: quiz.title,
+        questionCount: quiz.questions.length,
+      };
+    })
+    .post(
+      '/quizzes',
+      async ({ request, body, set }) => {
+        if (!canEditQuiz(request)) {
+          set.status = 403;
+          return { error: 'Not authorized' };
+        }
+
+        await saveQuiz(body);
+        return { success: true };
+      },
+      {
+        body: t.Unknown(),
+      },
+    )
+    .put(
+      '/quizzes/:id',
+      async ({ request, params, body, set }) => {
+        if (!canEditQuiz(request)) {
+          set.status = 403;
+          return { error: 'Not authorized' };
+        }
+
+        await updateQuiz(params.id, body);
+        return { success: true };
+      },
+      {
+        body: t.Unknown(),
+      },
+    )
     .post('/echo', ({ body }) => ({ message: body.message }), {
       body: t.Object(
         { message: t.String({ minLength: 1, maxLength: 200 }) },
