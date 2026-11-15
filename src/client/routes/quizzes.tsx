@@ -1,0 +1,316 @@
+import {
+  Button,
+  Card,
+  Code,
+  FileInput,
+  Group,
+  Radio,
+  Stack,
+  Text,
+  TextInput,
+  Title,
+} from '@mantine/core';
+import { createFileRoute } from '@tanstack/react-router';
+import { useRef, useState } from 'react';
+
+export const Route = createFileRoute('/quizzes')({ component: QuizzesPage });
+
+interface QuizQuestion {
+  id: string;
+  prompt: string;
+  choices: string[];
+  correctChoice: number;
+}
+
+interface Quiz {
+  id: string;
+  title: string;
+  questions: QuizQuestion[];
+}
+
+const STORAGE_KEY = 'comet-network-quiz:custom-quizzes';
+
+function blankQuestion(): QuizQuestion {
+  return {
+    id: crypto.randomUUID(),
+    prompt: '',
+    choices: ['', '', '', ''],
+    correctChoice: 0,
+  };
+}
+
+function readSavedQuizzes(): Quiz[] {
+  try {
+    const saved: unknown = JSON.parse(
+      localStorage.getItem(STORAGE_KEY) ?? '[]',
+    );
+    return Array.isArray(saved) ? saved.filter(isQuiz) : [];
+  } catch {
+    return [];
+  }
+}
+
+function isQuiz(value: unknown): value is Quiz {
+  if (!value || typeof value !== 'object') return false;
+  const quiz = value as Partial<Quiz>;
+  return (
+    typeof quiz.id === 'string' &&
+    quiz.id.length > 0 &&
+    typeof quiz.title === 'string' &&
+    quiz.title.length > 0 &&
+    Array.isArray(quiz.questions) &&
+    quiz.questions.length > 0 &&
+    quiz.questions.every((value: unknown) => {
+      if (!value || typeof value !== 'object') return false;
+      const question = value as Partial<QuizQuestion>;
+      return (
+        typeof question.id === 'string' &&
+        question.id.length > 0 &&
+        typeof question.prompt === 'string' &&
+        question.prompt.length > 0 &&
+        Array.isArray(question.choices) &&
+        question.choices.length === 4 &&
+        question.choices.every(
+          (choice) => typeof choice === 'string' && choice.length > 0,
+        ) &&
+        typeof question.correctChoice === 'number' &&
+        Number.isInteger(question.correctChoice) &&
+        question.correctChoice >= 0 &&
+        question.correctChoice <= 3
+      );
+    })
+  );
+}
+
+export function QuizzesPage() {
+  const [title, setTitle] = useState('');
+  const [questions, setQuestions] = useState<QuizQuestion[]>([blankQuestion()]);
+  const [savedQuizzes, setSavedQuizzes] = useState<Quiz[]>(readSavedQuizzes);
+  const savedQuizzesRef = useRef(savedQuizzes);
+  const [message, setMessage] = useState('');
+
+  function saveQuizzes(update: (current: Quiz[]) => Quiz[]): boolean {
+    const nextQuizzes = update(savedQuizzesRef.current);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextQuizzes));
+    } catch {
+      setMessage(
+        'Could not save quizzes on this device. Your changes were kept.',
+      );
+      return false;
+    }
+    savedQuizzesRef.current = nextQuizzes;
+    setSavedQuizzes(nextQuizzes);
+    return true;
+  }
+
+  function updateQuestion(index: number, update: Partial<QuizQuestion>) {
+    setQuestions((current) =>
+      current.map((question, questionIndex) =>
+        questionIndex === index ? { ...question, ...update } : question,
+      ),
+    );
+  }
+
+  function updateChoice(
+    questionIndex: number,
+    choiceIndex: number,
+    value: string,
+  ) {
+    const question = questions[questionIndex];
+    if (!question) return;
+    const choices = [...question.choices];
+    choices[choiceIndex] = value;
+    updateQuestion(questionIndex, { choices });
+  }
+
+  function saveQuiz() {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
+      setMessage('Give your quiz a title.');
+      return;
+    }
+    if (
+      questions.some(
+        (question) =>
+          !question.prompt.trim() ||
+          question.choices.some((choice) => !choice.trim()),
+      )
+    ) {
+      setMessage(
+        'Add a question and fill in all four answer choices for each one.',
+      );
+      return;
+    }
+
+    const quiz: Quiz = {
+      id: crypto.randomUUID(),
+      title: trimmedTitle,
+      questions: questions.map((question) => ({
+        ...question,
+        prompt: question.prompt.trim(),
+        choices: question.choices.map((choice) => choice.trim()),
+      })),
+    };
+    if (!saveQuizzes((current) => [quiz, ...current])) return;
+    setTitle('');
+    setQuestions([blankQuestion()]);
+    setMessage('Quiz saved on this device.');
+  }
+
+  async function importQuiz(file: File | null) {
+    if (!file) return;
+    try {
+      const imported: unknown = JSON.parse(await file.text());
+      if (!isQuiz(imported)) {
+        setMessage('That file does not match the quiz format.');
+        return;
+      }
+      const saved = saveQuizzes((current) => [
+        imported,
+        ...current.filter((quiz) => quiz.id !== imported.id),
+      ]);
+      if (saved) setMessage(`Imported “${imported.title}”.`);
+    } catch {
+      setMessage('Could not read that file. Choose a valid quiz JSON file.');
+    }
+  }
+
+  return (
+    <Stack maw={680}>
+      <Title order={2}>Create a quiz</Title>
+      <Text>
+        Write questions, enter four choices, and select the correct answer for
+        each question.
+      </Text>
+      <TextInput
+        label="Quiz title"
+        placeholder="For example, Network Basics"
+        value={title}
+        maxLength={100}
+        onChange={(event) => {
+          setTitle(event.currentTarget.value);
+        }}
+      />
+      {questions.map((question, questionIndex) => (
+        <Card key={question.id} withBorder>
+          <Stack>
+            <Title order={3}>Question {questionIndex + 1}</Title>
+            <TextInput
+              label="Question"
+              value={question.prompt}
+              onChange={(event) => {
+                updateQuestion(questionIndex, {
+                  prompt: event.currentTarget.value,
+                });
+              }}
+            />
+            <Radio.Group
+              label="Answer choices — select the correct answer"
+              value={String(question.correctChoice)}
+              onChange={(value) => {
+                updateQuestion(questionIndex, { correctChoice: Number(value) });
+              }}
+            >
+              <Stack gap="xs" mt="xs">
+                {question.choices.map((choice, choiceIndex) => (
+                  <Group key={choiceIndex} wrap="nowrap" align="end">
+                    <Radio
+                      value={String(choiceIndex)}
+                      aria-label={`Mark choice ${String(choiceIndex + 1)} as correct`}
+                    />
+                    <TextInput
+                      style={{ flex: 1 }}
+                      label={`Choice ${String.fromCharCode(65 + choiceIndex)}`}
+                      value={choice}
+                      onChange={(event) => {
+                        updateChoice(
+                          questionIndex,
+                          choiceIndex,
+                          event.currentTarget.value,
+                        );
+                      }}
+                    />
+                  </Group>
+                ))}
+              </Stack>
+            </Radio.Group>
+            {questions.length > 1 && (
+              <Button
+                variant="subtle"
+                color="red"
+                onClick={() => {
+                  setQuestions((current) =>
+                    current.filter((_, index) => index !== questionIndex),
+                  );
+                }}
+              >
+                Remove question
+              </Button>
+            )}
+          </Stack>
+        </Card>
+      ))}
+      <Group>
+        <Button
+          variant="default"
+          onClick={() => {
+            setQuestions([...questions, blankQuestion()]);
+          }}
+        >
+          Add question
+        </Button>
+        <Button onClick={saveQuiz}>Save quiz</Button>
+      </Group>
+      <FileInput
+        label="Upload a quiz file"
+        description="Import a quiz JSON file."
+        accept=".json,application/json"
+        onChange={(file) => {
+          void importQuiz(file).catch(() => {
+            setMessage(
+              'Could not read that file. Choose a valid quiz JSON file.',
+            );
+          });
+        }}
+        clearable
+      />
+      {message && <Text role="status">{message}</Text>}
+
+      <Title order={3}>Saved on this device</Title>
+      {savedQuizzes.length === 0 ? (
+        <Text c="dimmed">No custom quizzes saved yet.</Text>
+      ) : (
+        savedQuizzes.map((quiz) => (
+          <Card key={quiz.id} withBorder>
+            <Group justify="space-between">
+              <Stack gap={2}>
+                <Text fw={600}>{quiz.title}</Text>
+                <Text size="sm" c="dimmed">
+                  {quiz.questions.length} question
+                  {quiz.questions.length === 1 ? '' : 's'}
+                </Text>
+              </Stack>
+              <Button
+                variant="subtle"
+                color="red"
+                onClick={() => {
+                  saveQuizzes((current) =>
+                    current.filter((saved) => saved.id !== quiz.id),
+                  );
+                }}
+              >
+                Delete
+              </Button>
+            </Group>
+          </Card>
+        ))
+      )}
+      <Text size="sm" c="dimmed">
+        Each question stores the correct choice as <Code>correctChoice</Code>,
+        matching the project quiz schema. Quizzes are saved in this browser. You
+        can import a quiz JSON file if you already have one.
+      </Text>
+    </Stack>
+  );
+}

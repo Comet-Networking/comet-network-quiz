@@ -1,5 +1,10 @@
-# Hand-authored quizzes (server only)
+# Quiz formats
 
-Future quizzes will be YAML files in this folder.
-`example.yaml` shows an example
-`quiz.schema.yaml` contains the quiz schema
+The **Quizzes** page lets you create a custom quiz, choose the correct answer
+for each question, and save it in this browser. You can also import an existing
+quiz JSON file. The JSON fields follow the same shape as the schema below,
+including `correctChoice` (zero-based, from 0 to 3).
+
+These browser-saved quizzes are an authoring feature; the game server does not
+load them yet. The YAML example is a server-side format example, and
+`quiz.schema.yaml` describes that format.
