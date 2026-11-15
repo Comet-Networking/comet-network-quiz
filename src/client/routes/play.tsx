@@ -59,7 +59,7 @@ type FinishedMsg = Extract<ServerMessage, { type: 'finished' }>;
 
 //strucutre for data used (different for each screen)
 type View =
-  | { name: 'join'; error?: string | undefined}
+  | { name: 'join'; error?: string | undefined }
   | { name: 'lobby'; playerName: string }
   | ({ name: 'question'; answer: number | null } & Omit<QuestionMsg, 'type'>)
   | ({ name: 'reveal'; question: PlayerQuestion } & Omit<RevealMsg, 'type'>)
@@ -91,7 +91,9 @@ export function PlayerView({ transport }: { transport: Transport }) {
         setView((prev) => {
           switch (msg.type) {
             case 'lobby':
-              return prev.name === 'lobby' ? prev : { name: 'lobby', playerName: '' };
+              return prev.name === 'lobby'
+                ? prev
+                : { name: 'lobby', playerName: '' };
             case 'error':
               return { name: 'join', error: msg.message };
             case 'question': {
@@ -110,7 +112,7 @@ export function PlayerView({ transport }: { transport: Transport }) {
           }
         });
       }),
-    [transport]
+    [transport],
   );
 
   //function that runs when the user join a lobby
@@ -176,9 +178,15 @@ function JoinScreen({
             maxLength={20}
             value={name}
             onChange={(e) => setName(e.currentTarget.value)}
-            onKeyDown={(e) => e.key === 'Enter' && ready && onJoin(pin.trim(), name.trim())}
+            onKeyDown={(e) =>
+              e.key === 'Enter' && ready && onJoin(pin.trim(), name.trim())
+            }
           />
-          <Button size="lg" disabled={!ready} onClick={() => onJoin(pin.trim(), name.trim())}>
+          <Button
+            size="lg"
+            disabled={!ready}
+            onClick={() => onJoin(pin.trim(), name.trim())}
+          >
             Join game
           </Button>
         </Stack>
@@ -192,7 +200,9 @@ function LobbyScreen({ playerName }: { playerName: string }) {
     <Center h="100%" p="md">
       <Stack align="center" gap="sm">
         <Loader />
-        <Title order={2}>{playerName ? `You're in, ${playerName}` : "You're in"}</Title>
+        <Title order={2}>
+          {playerName ? `You're in, ${playerName}` : "You're in"}
+        </Title>
         <Text c="dimmed">Waiting for the host to start the game.</Text>
       </Stack>
     </Center>
@@ -203,7 +213,8 @@ function LobbyScreen({ playerName }: { playerName: string }) {
 function useRemaining(endsAt: number, durationMs: number) {
   const [pct, setPct] = useState(100);
   useEffect(() => {
-    const tick = () => setPct(Math.max(0, ((endsAt - Date.now()) / durationMs) * 100));
+    const tick = () =>
+      setPct(Math.max(0, ((endsAt - Date.now()) / durationMs) * 100));
     tick();
     const id = setInterval(tick, 100);
     return () => clearInterval(id);
@@ -225,7 +236,12 @@ function QuestionScreen({
 
   return (
     <Stack h="100%" gap={0}>
-      <Progress value={pct} size="md" radius={0} color={pct > 25 ? 'blue' : 'red'} />
+      <Progress
+        value={pct}
+        size="md"
+        radius={0}
+        color={pct > 25 ? 'blue' : 'red'}
+      />
 
       <Stack flex={1} justify="center" p="md" gap="xs">
         <Text c="dimmed" ta="center" size="sm">
@@ -256,7 +272,11 @@ function QuestionScreen({
               onClick={() => onAnswer(i)}
               leftSection={<span aria-hidden>{SHAPES[i]}</span>}
               styles={{
-                label: { whiteSpace: 'normal', textAlign: 'left', fontSize: 'var(--mantine-font-size-lg)' },
+                label: {
+                  whiteSpace: 'normal',
+                  textAlign: 'left',
+                  fontSize: 'var(--mantine-font-size-lg)',
+                },
               }}
             >
               {choice}
@@ -270,7 +290,11 @@ function QuestionScreen({
 
 function RevealScreen({ view }: { view: Extract<View, { name: 'reveal' }> }) {
   const timedOut = view.yourChoice === null;
-  const headline = view.correct ? 'Correct' : timedOut ? "Time's up" : 'Incorrect';
+  const headline = view.correct
+    ? 'Correct'
+    : timedOut
+      ? "Time's up"
+      : 'Incorrect';
 
   return (
     <Center h="100%" p="md" bg={view.correct ? 'green.7' : 'red.7'} c="white">
@@ -284,7 +308,8 @@ function RevealScreen({ view }: { view: Extract<View, { name: 'reveal' }> }) {
               Correct answer
             </Text>
             <Text size="lg" fw={600}>
-              {SHAPES[view.correctChoice]} {view.question.choices[view.correctChoice]}
+              {SHAPES[view.correctChoice]}{' '}
+              {view.question.choices[view.correctChoice]}
             </Text>
           </Paper>
         )}
@@ -294,7 +319,11 @@ function RevealScreen({ view }: { view: Extract<View, { name: 'reveal' }> }) {
   );
 }
 
-function FinishedScreen({ view }: { view: Extract<View, { name: 'finished' }> }) {
+function FinishedScreen({
+  view,
+}: {
+  view: Extract<View, { name: 'finished' }>;
+}) {
   return (
     <Center h="100%" p="md">
       <Stack align="center" gap="xs">
@@ -324,12 +353,32 @@ function ordinal(n: number) {
   }
 }
 
-// Replace with a WebSocket / socket.io implementation of `Transport`.   
+// Replace with a WebSocket / socket.io implementation of `Transport`.
 export function createMockTransport(): Transport {
   const quiz: (PlayerQuestion & { correctChoice: number })[] = [
-    { id: 'q1', prompt: 'Which data structure uses FIFO ordering?', choices: ['Stack', 'Queue', 'Heap', 'Tree'], correctChoice: 1 },
-    { id: 'q2', prompt: 'What does a page table map?', choices: ['Files to inodes', 'Virtual to physical addresses', 'Threads to cores', 'Sockets to ports'], correctChoice: 1 },
-    { id: 'q3', prompt: 'Which scheduling policy can starve long jobs?', choices: ['Round robin', 'FCFS', 'Shortest job first', 'Lottery'], correctChoice: 2 },
+    {
+      id: 'q1',
+      prompt: 'Which data structure uses FIFO ordering?',
+      choices: ['Stack', 'Queue', 'Heap', 'Tree'],
+      correctChoice: 1,
+    },
+    {
+      id: 'q2',
+      prompt: 'What does a page table map?',
+      choices: [
+        'Files to inodes',
+        'Virtual to physical addresses',
+        'Threads to cores',
+        'Sockets to ports',
+      ],
+      correctChoice: 1,
+    },
+    {
+      id: 'q3',
+      prompt: 'Which scheduling policy can starve long jobs?',
+      choices: ['Round robin', 'FCFS', 'Shortest job first', 'Lottery'],
+      correctChoice: 2,
+    },
   ];
   const DURATION = 10_000;
   const listeners = new Set<(m: ServerMessage) => void>();
@@ -346,10 +395,20 @@ export function createMockTransport(): Transport {
     if (!q) return;
     //caclulate the player's score based on how fast they answered
     const correct = answer?.choice === q.correctChoice;
-    const earned = correct && answer ? Math.round(1000 * (1 - (answer.at / DURATION) * 0.5)) : 0;
+    const earned =
+      correct && answer
+        ? Math.round(1000 * (1 - (answer.at / DURATION) * 0.5))
+        : 0;
     score += earned;
-    //send the reveal message to every listener 
-    emit({ type: 'reveal', correctChoice: q.correctChoice, yourChoice: answer?.choice ?? null, correct, pointsEarned: earned, score });
+    //send the reveal message to every listener
+    emit({
+      type: 'reveal',
+      correctChoice: q.correctChoice,
+      yourChoice: answer?.choice ?? null,
+      correct,
+      pointsEarned: earned,
+      score,
+    });
     //move to the next question
     timer = setTimeout(next, 3000);
   };
@@ -376,7 +435,7 @@ export function createMockTransport(): Transport {
       durationMs: DURATION,
     });
 
-    //call the reveal function when the time ends 
+    //call the reveal function when the time ends
     timer = setTimeout(reveal, DURATION);
   };
 
@@ -388,7 +447,7 @@ export function createMockTransport(): Transport {
         clearTimeout(timer);
       };
     },
-    //processing the received messages 
+    //processing the received messages
     send(msg) {
       if (msg.type === 'join') {
         setTimeout(() => emit({ type: 'lobby' }), 300);

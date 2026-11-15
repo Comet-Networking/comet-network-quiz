@@ -1,4 +1,13 @@
-import { Badge, Code, Group, List, Paper, Stack, Text, Title } from '@mantine/core';
+import {
+  Badge,
+  Code,
+  Group,
+  List,
+  Paper,
+  Stack,
+  Text,
+  Title,
+} from '@mantine/core';
 import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 
@@ -58,9 +67,7 @@ export function HostPage() {
         ) : (
           <List spacing="xs">
             {log.map((m, i) => (
-              <List.Item key={i}>
-                {m.text}
-              </List.Item>
+              <List.Item key={i}>{m.text}</List.Item>
             ))}
           </List>
         )}

@@ -7,7 +7,7 @@ const strict = { additionalProperties: false } as const;
 const Id = t.String({ minLength: 1, maxLength: 64 });
 
 const Pong = t.Object({ type: t.Literal('pong'), requestId: Id }, strict);
-const Said = t.Object({ type: t.Literal('said'), text: t.String()}, strict);
+const Said = t.Object({ type: t.Literal('said'), text: t.String() }, strict);
 
 function createApi() {
   return new Elysia()
@@ -23,9 +23,22 @@ function createApi() {
       body: t.Union([
         t.Object({ type: t.Literal('ping'), requestId: Id }, strict),
         t.Object({ type: t.Literal('create-lobby') }, strict),
-        t.Object({ type: t.Literal('say'), text: t.String({ minLength: 1, maxLength: 24 })}, strict),
+        t.Object(
+          {
+            type: t.Literal('say'),
+            text: t.String({ minLength: 1, maxLength: 24 }),
+          },
+          strict,
+        ),
       ]),
-      response: t.Union([Pong, Said, t.Object({ type: t.Literal('lobby-created'), code: t.String() }, strict)]),
+      response: t.Union([
+        Pong,
+        Said,
+        t.Object(
+          { type: t.Literal('lobby-created'), code: t.String() },
+          strict,
+        ),
+      ]),
       open(socket) {
         socket.subscribe('lobby');
       },
