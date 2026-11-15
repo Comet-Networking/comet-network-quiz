@@ -32,7 +32,9 @@ export function createMockTransport(): Transport {
   const DURATION = 10_000;
   const listeners = new Set<(m: ServerMessage) => void>();
   const emit = (m: ServerMessage) => {
-    listeners.forEach((l) => l(m));
+    {
+      listeners.forEach((l) => l(m));
+    }
   };
 
   let score = 0;
@@ -81,7 +83,7 @@ export function createMockTransport(): Transport {
       type: 'question',
       index: current,
       total: quiz.length,
-      question: { id, prompt, choices } as PlayerQuestion,
+      question: { id, prompt, choices },
       endsAt: Date.now() + DURATION,
       durationMs: DURATION,
     });

@@ -206,7 +206,9 @@ function JoinScreen({
               setName(e.currentTarget.value);
             }}
             onKeyDown={(e) => {
-              e.key === 'Enter' && ready && onJoin(pin.trim(), name.trim());
+              if (e.key === 'Enter' && ready) {
+                onJoin(pin.trim(), name.trim());
+              }
             }}
           />
           <Button

@@ -13,7 +13,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 
 import { useSocket } from '../useSocket'; // adjust to wherever you put the hook
-
+import { isServerMessage } from '../useSocket';
 export const Route = createFileRoute('/test')({ component: TestPage });
 
 interface Said {
@@ -25,8 +25,9 @@ export function TestPage() {
   const [text, setText] = useState('');
   const [log, setLog] = useState<Said[]>([]);
 
-  const { connected, send } = useSocket<Said>((msg) => {
-    if (msg.type === 'said') setLog((l) => [...l, msg]);
+  const { connected, send } = useSocket((msg) => {
+    if (!isServerMessage(msg)) return;
+    setLog((l) => [...l, msg]);
   });
 
   return (

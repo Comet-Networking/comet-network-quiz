@@ -1,10 +1,34 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-export function useSocket<T>(onMessage: (msg: T) => void) {
+const MESSAGE_TYPES = ['said', 'pong'] as const;
+export type messageTypes = {
+  type: 'said';
+  name: string;
+  text: string;
+  at: number;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+export function isServerMessage(value: unknown): value is messageTypes {
+  return (
+    isRecord(value) &&
+    typeof value['type'] === 'string' &&
+    (MESSAGE_TYPES as readonly string[]).includes(value['type'])
+  );
+}
+
+export function useSocket(onMessage: (msg: unknown) => void) {
   const wsRef = useRef<WebSocket | null>(null);
+
   const handler = useRef(onMessage);
-  handler.current = onMessage; // always call the latest callback
   const [connected, setConnected] = useState(false);
+
+  useEffect(() => {
+    handler.current = onMessage; // always call the latest callback
+  }, [onMessage]);
 
   useEffect(() => {
     let stopped = false;
@@ -23,7 +47,7 @@ export function useSocket<T>(onMessage: (msg: T) => void) {
         setConnected(false);
         if (!stopped) retry = setTimeout(connect, 1000); // auto-reconnect
       };
-      ws.onmessage = (e) => handler.current(JSON.parse(e.data) as T);
+      ws.onmessage = (e) => handler.current(JSON.parse(e.data));
     };
 
     connect();

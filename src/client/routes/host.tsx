@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react';
 import { useSocket } from '../useSocket'; // adjust the path to wherever you put the hook
 
 export const Route = createFileRoute('/host')({ component: HostPage });
-
+import { isServerMessage } from '../useSocket';
 interface Said {
   type: 'said';
   name: string;
@@ -26,8 +26,9 @@ export function HostPage() {
   const [addresses, setAddresses] = useState<string[]>([]);
   const [log, setLog] = useState<Said[]>([]);
 
-  const { connected } = useSocket<Said>((msg) => {
-    if (msg.type === 'said') setLog((l) => [...l, msg]);
+  const { connected } = useSocket((msg) => {
+    if (!isServerMessage(msg)) return;
+    setLog((l) => [...l, msg]);
   });
 
   useEffect(() => {
