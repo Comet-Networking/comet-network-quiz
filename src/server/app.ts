@@ -2,10 +2,7 @@ import { Elysia, t } from 'elysia';
 import { loadQuiz, saveQuiz, updateQuiz } from './quizzes';
 
 function canEditQuiz(request: Request): boolean {
-  const adminKey = process.env['QUIZ_ADMIN_KEY'];
-
-  return Boolean(adminKey) &&
-    request.headers.get('x-quiz-admin-key') === adminKey;
+  return request.headers.get('x-quiz-admin-key') === 'comet-quiz-admin';
 }
 
 import { createLobby } from './lobbies';
