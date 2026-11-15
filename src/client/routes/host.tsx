@@ -1,5 +1,6 @@
 import {
   Badge,
+  Button,
   Code,
   Group,
   List,
@@ -15,11 +16,32 @@ import { isServerMessage, useSocket, type Said } from '../useSocket';
 
 export const Route = createFileRoute('/host')({ component: HostPage });
 
+function isLobbyCreated(
+  value: unknown,
+): value is { type: 'lobby-created'; code: string } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'type' in value &&
+    value.type === 'lobby-created' &&
+    'code' in value &&
+    typeof value.code === 'string'
+  );
+}
+
 export function HostPage() {
   const [addresses, setAddresses] = useState<string[]>([]);
   const [log, setLog] = useState<Said[]>([]);
 
-  const { connected } = useSocket((msg) => {
+  // The join code from the server. null = no lobby created yet.
+  const [code, setCode] = useState<string | null>(null);
+
+  const { connected, send } = useSocket((msg) => {
+    //The join code from the server, if null = no lobby created yet
+    if (isLobbyCreated(msg)) {
+      setCode(msg.code);
+      return;
+    }
     if (!isServerMessage(msg)) return;
     setLog((l) => [...l, msg]);
   });
@@ -45,6 +67,23 @@ export function HostPage() {
           {connected ? 'Connected' : 'Disconnected'}
         </Badge>
       </Group>
+
+      <Paper withBorder p="md">
+        <Button
+          disabled={!connected}
+          onClick={() => {
+            send({ type: 'create-lobby' });
+          }}
+        >
+          Create lobby
+        </Button>
+        {code !== null && (
+          <Stack gap={0} mt="md">
+            <Text c="dimmed">Join code</Text>
+            <Title order={1}>{code}</Title>
+          </Stack>
+        )}
+      </Paper>
 
       <Paper withBorder p="md">
         <Text fw={500} mb="xs">
