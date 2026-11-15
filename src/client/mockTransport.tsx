@@ -43,6 +43,9 @@ export function createMockTransport(): Transport {
   let current = -1;
   let answer: { choice: number; at: number } | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let lobbyTimer: ReturnType<typeof setTimeout> | undefined;
+  let questionStartedAt = 0;
+  let joined = false;
 
   //function that reveals the correct answer
   const reveal = () => {
@@ -80,13 +83,14 @@ export function createMockTransport(): Transport {
     }
 
     const { id, prompt, choices } = q;
+    questionStartedAt = Date.now();
     //send a message containing the question information and duration
     emit({
       type: 'question',
       index: current,
       total: quiz.length,
       question: { id, prompt, choices },
-      endsAt: Date.now() + DURATION,
+      endsAt: questionStartedAt + DURATION,
       durationMs: DURATION,
     });
 
@@ -99,18 +103,31 @@ export function createMockTransport(): Transport {
       listeners.add(l);
       return () => {
         listeners.delete(l);
-        clearTimeout(timer);
+        if (listeners.size === 0) {
+          clearTimeout(timer);
+          clearTimeout(lobbyTimer);
+          joined = false;
+          current = -1;
+          score = 0;
+          answer = null;
+        }
       };
     },
     //processing the received messages
     send(msg) {
       if (msg.type === 'join') {
-        setTimeout(() => {
+        if (joined) return;
+        joined = true;
+        lobbyTimer = setTimeout(() => {
           emit({ type: 'lobby' });
         }, 300);
-        setTimeout(next, 2500);
-      } else if (!answer) {
-        answer = { choice: msg.choice, at: 0 };
+        timer = setTimeout(next, 2500);
+      } else if (
+        !answer &&
+        quiz[current]?.id === msg.questionId &&
+        Date.now() < questionStartedAt + DURATION
+      ) {
+        answer = { choice: msg.choice, at: Date.now() - questionStartedAt };
         clearTimeout(timer);
         timer = setTimeout(reveal, 1500);
       }

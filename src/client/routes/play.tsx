@@ -148,7 +148,12 @@ export function PlayerView({ transport }: { transport: Transport }) {
   //function that runs after the user answers a question (before the timer runs out)
   const answer = (choice: number) => {
     //exit early if the player is not on the question screen or if they already answered
-    if (view.name !== 'question' || view.answer !== null) return;
+    if (
+      view.name !== 'question' ||
+      view.answer !== null ||
+      Date.now() >= view.endsAt
+    )
+      return;
     //send a msg to the server and change the screen
     transport.send({ type: 'answer', questionId: view.question.id, choice });
     setView({ ...view, answer: choice });

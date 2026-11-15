@@ -11,16 +11,9 @@ import {
 import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 
-import { useSocket } from '../useSocket'; // adjust the path to wherever you put the hook
+import { isServerMessage, useSocket, type Said } from '../useSocket';
 
 export const Route = createFileRoute('/host')({ component: HostPage });
-import { isServerMessage } from '../useSocket';
-interface Said {
-  type: 'said';
-  name: string;
-  text: string;
-  at: number;
-}
 
 export function HostPage() {
   const [addresses, setAddresses] = useState<string[]>([]);
@@ -62,7 +55,7 @@ export function HostPage() {
         ) : (
           <Stack gap={4}>
             {addresses.map((ip) => (
-              <Code key={ip}>{`http://${ip}${port}/test`}</Code>
+              <Code key={ip}>{`${location.protocol}//${ip}${port}/test`}</Code>
             ))}
           </Stack>
         )}

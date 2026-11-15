@@ -1,22 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const MESSAGE_TYPES = ['said', 'pong'] as const;
-export interface messageTypes {
+export interface Said {
   type: 'said';
-  name: string;
   text: string;
-  at: number;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-export function isServerMessage(value: unknown): value is messageTypes {
+export function isServerMessage(value: unknown): value is Said {
   return (
     isRecord(value) &&
-    typeof value['type'] === 'string' &&
-    (MESSAGE_TYPES as readonly string[]).includes(value['type'])
+    value['type'] === 'said' &&
+    typeof value['text'] === 'string'
   );
 }
 
@@ -41,11 +38,12 @@ export function useSocket(onMessage: (msg: unknown) => void) {
       const ws = new WebSocket(`${proto}://${location.host}/api/ws`);
       wsRef.current = ws;
       ws.onopen = () => {
-        setConnected(true);
+        if (!stopped) setConnected(true);
       };
       ws.onclose = () => {
+        if (stopped) return;
         setConnected(false);
-        if (!stopped) retry = setTimeout(connect, 1000); // auto-reconnect
+        retry = setTimeout(connect, 1000); // auto-reconnect
       };
       ws.onmessage = (e) => {
         if (typeof e.data !== 'string') return;

@@ -12,14 +12,8 @@ import {
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 
-import { useSocket } from '../useSocket'; // adjust to wherever you put the hook
-import { isServerMessage } from '../useSocket';
+import { isServerMessage, useSocket, type Said } from '../useSocket';
 export const Route = createFileRoute('/test')({ component: TestPage });
-
-interface Said {
-  type: 'said';
-  text: string;
-}
 
 export function TestPage() {
   const [text, setText] = useState('');
@@ -56,7 +50,7 @@ export function TestPage() {
                   setText(e.currentTarget.value);
                 }}
               />
-              <Button type="submit" disabled={!connected}>
+              <Button type="submit" disabled={!connected || !text.trim()}>
                 Send
               </Button>
             </Stack>

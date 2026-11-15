@@ -26,7 +26,7 @@ function createApi() {
         t.Object(
           {
             type: t.Literal('say'),
-            text: t.String({ minLength: 1, maxLength: 24 }),
+            text: t.String({ minLength: 1, maxLength: 200 }),
           },
           strict,
         ),
