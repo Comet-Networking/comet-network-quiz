@@ -28,3 +28,21 @@ export function createLobby(): Lobby {
 export function getLobby(code: string): Lobby | undefined {
   return lobbies.get(code);
 }
+
+export type JoinResult =
+  { ok: true; lobby: Lobby } | { ok: false; reason: string };
+
+export function addPlayer(code: string, name: string): JoinResult {
+  const lobby = lobbies.get(code);
+  if (!lobby) {
+    return { ok: false, reason: 'Lobby not found' };
+  }
+  const taken = lobby.players.some(
+    (p) => p.toLowerCase() === name.toLowerCase(),
+  );
+  if (taken) {
+    return { ok: false, reason: 'Name already taken' };
+  }
+  lobby.players.push(name);
+  return { ok: true, lobby };
+}

@@ -29,17 +29,37 @@ function isLobbyCreated(
   );
 }
 
+function isLobbyUpdate(
+  value: unknown,
+): value is { type: 'lobby-update'; players: string[] } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'type' in value &&
+    value.type === 'lobby-update' &&
+    'players' in value &&
+    Array.isArray(value.players) &&
+    value.players.every((p: unknown) => typeof p === 'string')
+  );
+}
+
 export function HostPage() {
   const [addresses, setAddresses] = useState<string[]>([]);
   const [log, setLog] = useState<Said[]>([]);
 
   // The join code from the server. null = no lobby created yet.
   const [code, setCode] = useState<string | null>(null);
+  const [players, setPlayers] = useState<string[]>([]);
 
   const { connected, send } = useSocket((msg) => {
     //The join code from the server, if null = no lobby created yet
     if (isLobbyCreated(msg)) {
       setCode(msg.code);
+      setPlayers([]);
+      return;
+    }
+    if (isLobbyUpdate(msg)) {
+      setPlayers(msg.players);
       return;
     }
     if (!isServerMessage(msg)) return;
@@ -81,6 +101,18 @@ export function HostPage() {
           <Stack gap={0} mt="md">
             <Text c="dimmed">Join code</Text>
             <Title order={1}>{code}</Title>
+            <Text fw={500} mt="md">
+              Players ({players.length})
+            </Text>
+            {players.length === 0 ? (
+              <Text c="dimmed">Waiting for players…</Text>
+            ) : (
+              <List>
+                {players.map((p) => (
+                  <List.Item key={p}>{p}</List.Item>
+                ))}
+              </List>
+            )}
           </Stack>
         )}
       </Paper>
