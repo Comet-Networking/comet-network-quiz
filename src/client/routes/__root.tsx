@@ -21,7 +21,6 @@ export function Layout() {
             <Link to="/host">Host</Link>
             <Link to="/play">Play</Link>
             <Link to="/quizzes">Quizzes</Link>
-            <Link to="/create-quiz">Create hosted quiz</Link>
             <Link to="/test">Test</Link>
           </Group>
         </header>
