@@ -13,7 +13,7 @@ import {
   Title,
 } from '@mantine/core';
 import { createFileRoute } from '@tanstack/react-router';
-import { createMockTransport } from '../mockTransport';
+import { createGameTransport } from '../gameTransport';
 
 export interface PlayerQuestion {
   id: string;
@@ -75,7 +75,7 @@ export const Route = createFileRoute('/play')({ component: PlayRoute });
 function PlayRoute() {
   // useState keeps one transport for the lifetime of the page.
   // Creating it inline would make a new one on every render.
-  const [transport] = useState(createMockTransport);
+  const [transport] = useState(createGameTransport);
 
   return <PlayerView transport={transport} />;
 }
