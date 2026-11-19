@@ -1,6 +1,8 @@
 export interface Lobby {
   code: string;
   players: string[];
+  quizId?: string;
+  quizTitle?: string;
 }
 
 const lobbies = new Map<string, Lobby>();
@@ -15,12 +17,16 @@ export function generateCode(): string {
   return code;
 }
 
-export function createLobby(): Lobby {
+export function createLobby(quiz?: { id: string; title: string }): Lobby {
   let code = generateCode();
   while (lobbies.has(code)) {
     code = generateCode();
   }
-  const lobby: Lobby = { code, players: [] };
+  const lobby: Lobby = {
+    code,
+    players: [],
+    ...(quiz ? { quizId: quiz.id, quizTitle: quiz.title } : {}),
+  };
   lobbies.set(code, lobby);
   return lobby;
 }
