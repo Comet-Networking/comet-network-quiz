@@ -15,6 +15,7 @@ const Pong = t.Object({ type: t.Literal('pong'), requestId: Id }, strict);
 const Said = t.Object({ type: t.Literal('said'), text: t.String() }, strict);
 
 function createApi() {
+  const hostedLobbyBySocket = new Map<string, string>();
   return new Elysia()
     .onError(({ error, set }) => {
       if (error instanceof QuizError) {
@@ -108,13 +109,21 @@ function createApi() {
       open(socket) {
         socket.subscribe('lobby');
       },
+      close(socket) {
+        hostedLobbyBySocket.delete(socket.id);
+      },
       message(socket, message) {
         if (message.type === 'ping') {
           socket.send({ type: 'pong', requestId: message.requestId });
           return;
         }
         if (message.type === 'create-lobby') {
+          const previousCode = hostedLobbyBySocket.get(socket.id);
+          if (previousCode) {
+            socket.unsubscribe(`lobby:${previousCode}`);
+          }
           const lobby = createLobby();
+          hostedLobbyBySocket.set(socket.id, lobby.code);
           socket.subscribe(`lobby:${lobby.code}`);
           socket.send({ type: 'lobby-created', code: lobby.code });
           return;
