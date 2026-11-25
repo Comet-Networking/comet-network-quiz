@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia';
-import { createLobby } from './lobbies';
+import { addPlayer, createLobby } from './lobbies';
 import { lanAddresses } from './network';
 import { loadQuiz, QuizError, saveQuiz, updateQuiz } from './quizzes';
 
@@ -15,6 +15,7 @@ const Pong = t.Object({ type: t.Literal('pong'), requestId: Id }, strict);
 const Said = t.Object({ type: t.Literal('said'), text: t.String() }, strict);
 
 function createApi() {
+  const hostedLobbyBySocket = new Map<string, string>();
   return new Elysia()
     .onError(({ error, set }) => {
       if (error instanceof QuizError) {
@@ -76,6 +77,14 @@ function createApi() {
         t.Object({ type: t.Literal('create-lobby') }, strict),
         t.Object(
           {
+            type: t.Literal('join'),
+            pin: t.String({ minLength: 1, maxLength: 16 }),
+            name: t.String({ minLength: 1, maxLength: 32 }),
+          },
+          strict,
+        ),
+        t.Object(
+          {
             type: t.Literal('say'),
             text: t.String({ minLength: 1, maxLength: 200 }),
           },
@@ -89,9 +98,19 @@ function createApi() {
           { type: t.Literal('lobby-created'), code: t.String() },
           strict,
         ),
+        t.Object({ type: t.Literal('lobby') }, strict),
+        t.Object({ type: t.Literal('error'), message: t.String() }, strict),
+        t.Object(
+          { type: t.Literal('lobby-update'), players: t.Array(t.String()) },
+          strict,
+        ),
       ]),
+
       open(socket) {
         socket.subscribe('lobby');
+      },
+      close(socket) {
+        hostedLobbyBySocket.delete(socket.id);
       },
       message(socket, message) {
         if (message.type === 'ping') {
@@ -99,8 +118,30 @@ function createApi() {
           return;
         }
         if (message.type === 'create-lobby') {
+          const previousCode = hostedLobbyBySocket.get(socket.id);
+          if (previousCode) {
+            socket.unsubscribe(`lobby:${previousCode}`);
+          }
           const lobby = createLobby();
+          hostedLobbyBySocket.set(socket.id, lobby.code);
+          socket.subscribe(`lobby:${lobby.code}`);
           socket.send({ type: 'lobby-created', code: lobby.code });
+          return;
+        }
+        if (message.type === 'join') {
+          const result = addPlayer(
+            message.pin.trim().toUpperCase(),
+            message.name.trim(),
+          );
+          if (!result.ok) {
+            socket.send({ type: 'error', message: result.reason });
+            return;
+          }
+          socket.send({ type: 'lobby' });
+          socket.publish(`lobby:${result.lobby.code}`, {
+            type: 'lobby-update',
+            players: [...result.lobby.players],
+          });
           return;
         }
         const out = {
