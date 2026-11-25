@@ -200,6 +200,7 @@ function createApi() {
         }
         if (message.type === 'create-lobby') {
           const lobby = game.create(socket.id, message.quiz);
+          if (!lobby) return;
           socket.send({
             type: 'lobby-created',
             code: lobby.code,

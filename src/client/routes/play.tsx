@@ -194,7 +194,7 @@ function JoinScreen({
           </Title>
           <TextInput
             label="Game PIN"
-            inputMode="numeric"
+            autoCapitalize="characters"
             size="md"
             value={pin}
             onChange={(e) => {

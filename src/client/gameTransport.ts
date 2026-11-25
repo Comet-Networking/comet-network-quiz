@@ -13,53 +13,91 @@ export function createGameTransport(): Transport {
   const listeners = new Set<(message: ServerMessage) => void>();
   const pending: ClientMessage[] = [];
   let socket: WebSocket | null = null;
+  let closing = false;
+  let finished = false;
+
+  const emit = (message: ServerMessage) => {
+    listeners.forEach((listener) => {
+      listener(message);
+    });
+  };
 
   const connect = () => {
+    closing = false;
     const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-    socket = new WebSocket(`${protocol}://${location.host}/api/ws`);
-    socket.onopen = () => {
-      while (pending.length > 0) {
+    const ws = new WebSocket(`${protocol}://${location.host}/api/ws`);
+    socket = ws;
+    ws.onopen = () => {
+      if (socket !== ws) return;
+      while (pending.length > 0 && ws.readyState === WebSocket.OPEN) {
         const message = pending.shift();
-        if (message) socket?.send(JSON.stringify(message));
+        if (message) ws.send(JSON.stringify(message));
       }
     };
-    socket.onmessage = (event) => {
+    ws.onmessage = (event) => {
+      if (socket !== ws) return;
       if (typeof event.data !== 'string') return;
       try {
         const message: unknown = JSON.parse(event.data);
         if (isServerMessage(message)) {
-          listeners.forEach((listener) => {
-            listener(message);
-          });
+          if (message.type === 'finished') finished = true;
+          if (message.type === 'lobby') finished = false;
+          emit(message);
         }
       } catch {
         // Ignore malformed server messages.
       }
     };
-    socket.onerror = () => {
-      listeners.forEach((listener) => {
-        listener({ type: 'error', message: 'Could not connect to the game.' });
-      });
+    ws.onerror = () => {
+      if (socket !== ws) return;
+      pending.length = 0;
+      if (!closing && !finished) {
+        emit({ type: 'error', message: 'Could not connect to the game.' });
+      }
+    };
+    ws.onclose = () => {
+      if (socket !== ws) return;
+      socket = null;
+      pending.length = 0;
+      if (!closing && !finished && listeners.size > 0) {
+        emit({ type: 'error', message: 'Connection lost. Please rejoin.' });
+      }
     };
   };
 
   return {
     subscribe(listener) {
       listeners.add(listener);
-      if (!socket || socket.readyState === WebSocket.CLOSED) connect();
+      if (
+        !socket ||
+        socket.readyState === WebSocket.CLOSED ||
+        socket.readyState === WebSocket.CLOSING
+      ) {
+        connect();
+      }
       return () => {
         listeners.delete(listener);
         if (listeners.size === 0) {
+          closing = true;
+          pending.length = 0;
           socket?.close();
           socket = null;
         }
       };
     },
     send(message) {
+      if (message.type === 'join') finished = false;
       if (socket?.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify(message));
-      } else {
-        pending.push(message);
+        return;
+      }
+      pending.push(message);
+      if (
+        !socket ||
+        socket.readyState === WebSocket.CLOSED ||
+        socket.readyState === WebSocket.CLOSING
+      ) {
+        connect();
       }
     },
   };
