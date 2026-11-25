@@ -1,6 +1,8 @@
 export interface Lobby {
   code: string;
   players: string[];
+  quizId?: string;
+  quizTitle?: string;
 }
 
 const lobbies = new Map<string, Lobby>();
@@ -15,12 +17,16 @@ export function generateCode(): string {
   return code;
 }
 
-export function createLobby(): Lobby {
+export function createLobby(quiz?: { id: string; title: string }): Lobby {
   let code = generateCode();
   while (lobbies.has(code)) {
     code = generateCode();
   }
-  const lobby: Lobby = { code, players: [] };
+  const lobby: Lobby = {
+    code,
+    players: [],
+    ...(quiz ? { quizId: quiz.id, quizTitle: quiz.title } : {}),
+  };
   lobbies.set(code, lobby);
   return lobby;
 }
@@ -49,4 +55,16 @@ export function addPlayer(code: string, name: string): JoinResult {
   }
   lobby.players.push(trimmedName);
   return { ok: true, lobby };
+}
+
+export function removePlayer(code: string, name: string): Lobby | undefined {
+  const lobby = lobbies.get(code);
+  if (!lobby) return undefined;
+  const index = lobby.players.indexOf(name);
+  if (index >= 0) lobby.players.splice(index, 1);
+  return lobby;
+}
+
+export function deleteLobby(code: string): void {
+  lobbies.delete(code);
 }

@@ -5,16 +5,86 @@ import {
   Group,
   List,
   Paper,
+  Select,
   Stack,
   Text,
   Title,
 } from '@mantine/core';
 import { createFileRoute } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
+import { Link } from '../components/Link';
 import { isServerMessage, useSocket, type Said } from '../useSocket';
 
 export const Route = createFileRoute('/host')({ component: HostPage });
+
+interface SavedQuiz {
+  id: string;
+  title: string;
+  questions: {
+    id: string;
+    prompt: string;
+    choices: [string, string, string, string];
+    correctChoice: number;
+  }[];
+}
+
+function isSavedQuiz(value: unknown): value is SavedQuiz {
+  if (typeof value !== 'object' || value === null) return false;
+  if (
+    !('id' in value) ||
+    typeof value.id !== 'string' ||
+    value.id.trim().length === 0 ||
+    !('title' in value) ||
+    typeof value.title !== 'string' ||
+    value.title.trim().length === 0 ||
+    !('questions' in value) ||
+    !Array.isArray(value.questions) ||
+    value.questions.length === 0
+  ) {
+    return false;
+  }
+  const seenIds = new Set<string>();
+  return value.questions.every((question: unknown) => {
+    if (typeof question !== 'object' || question === null) return false;
+    if (
+      !('id' in question) ||
+      typeof question.id !== 'string' ||
+      question.id.trim().length === 0 ||
+      seenIds.has(question.id.trim())
+    ) {
+      return false;
+    }
+    seenIds.add(question.id.trim());
+    return (
+      'prompt' in question &&
+      typeof question.prompt === 'string' &&
+      question.prompt.trim().length > 0 &&
+      'choices' in question &&
+      Array.isArray(question.choices) &&
+      question.choices.length === 4 &&
+      question.choices.every(
+        (choice) => typeof choice === 'string' && choice.trim().length > 0,
+      ) &&
+      'correctChoice' in question &&
+      typeof question.correctChoice === 'number' &&
+      Number.isInteger(question.correctChoice) &&
+      question.correctChoice >= 0 &&
+      question.correctChoice < 4
+    );
+  });
+}
+
+function readSavedQuizzes(): SavedQuiz[] {
+  try {
+    const saved: unknown = JSON.parse(
+      localStorage.getItem('comet-network-quiz:custom-quizzes') ?? '[]',
+    );
+    return Array.isArray(saved) ? saved.filter(isSavedQuiz) : [];
+  } catch {
+    return [];
+  }
+}
 
 function isLobbyCreated(
   value: unknown,
@@ -46,25 +116,70 @@ function isLobbyUpdate(
 export function HostPage() {
   const [addresses, setAddresses] = useState<string[]>([]);
   const [log, setLog] = useState<Said[]>([]);
+  const [quizzes] = useState(readSavedQuizzes);
+  const [selectedQuizId, setSelectedQuizId] = useState<string | null>(
+    quizzes[0]?.id ?? null,
+  );
 
   // The join code from the server. null = no lobby created yet.
   const [code, setCode] = useState<string | null>(null);
   const [players, setPlayers] = useState<string[]>([]);
+  const [lobbyQuizTitle, setLobbyQuizTitle] = useState<string | null>(null);
+  const [gameStarted, setGameStarted] = useState(false);
+  const [hostError, setHostError] = useState('');
 
   const { connected, send } = useSocket((msg) => {
-    //The join code from the server, if null = no lobby created yet
+    if (isLobbyUpdate(msg)) {
+      setPlayers(msg.players);
+      return;
+    }
+    if (
+      typeof msg === 'object' &&
+      msg !== null &&
+      'type' in msg &&
+      msg.type === 'game-started'
+    ) {
+      setGameStarted(true);
+      return;
+    }
+    if (
+      typeof msg === 'object' &&
+      msg !== null &&
+      'type' in msg &&
+      msg.type === 'error' &&
+      'message' in msg &&
+      typeof msg.message === 'string'
+    ) {
+      setHostError(msg.message);
+      return;
+    }
     if (isLobbyCreated(msg)) {
       setCode(msg.code);
       setPlayers([]);
-      return;
-    }
-    if (isLobbyUpdate(msg)) {
-      setPlayers(msg.players);
+      setGameStarted(false);
+      setHostError('');
+      setLobbyQuizTitle(
+        'quizTitle' in msg && typeof msg.quizTitle === 'string'
+          ? msg.quizTitle
+          : null,
+      );
       return;
     }
     if (!isServerMessage(msg)) return;
     setLog((l) => [...l, msg]);
   });
+
+  const wasConnected = useRef(false);
+  useEffect(() => {
+    if (wasConnected.current && !connected && code !== null) {
+      setCode(null);
+      setPlayers([]);
+      setLobbyQuizTitle(null);
+      setGameStarted(false);
+      setHostError('Connection lost. Create a new lobby after reconnecting.');
+    }
+    wasConnected.current = connected;
+  }, [connected, code]);
 
   useEffect(() => {
     fetch('/api/info')
@@ -89,16 +204,57 @@ export function HostPage() {
       </Group>
 
       <Paper withBorder p="md">
-        <Button
-          disabled={!connected}
-          onClick={() => {
-            send({ type: 'create-lobby' });
-          }}
-        >
-          Create lobby
-        </Button>
+        <Stack gap="sm">
+          <Select
+            label="Quiz to host"
+            placeholder="Select a quiz"
+            data={quizzes.map((quiz) => ({
+              value: quiz.id,
+              label: `${quiz.title} (${String(quiz.questions.length)} questions)`,
+            }))}
+            value={selectedQuizId}
+            onChange={setSelectedQuizId}
+            disabled={quizzes.length === 0 || code !== null}
+          />
+          {quizzes.length === 0 && (
+            <Text c="dimmed">
+              No saved quizzes found. <Link to="/quizzes">Create one</Link>{' '}
+              first.
+            </Text>
+          )}
+          <Button
+            w="fit-content"
+            disabled={!connected || !selectedQuizId || code !== null}
+            onClick={() => {
+              const quiz = quizzes.find((item) => item.id === selectedQuizId);
+              if (!quiz) return;
+              if (
+                quiz.id.length > 64 ||
+                quiz.title.length > 100 ||
+                quiz.questions.some((question) => question.id.length > 64)
+              ) {
+                setHostError(
+                  'This quiz exceeds the maximum ID or title length and cannot be hosted.',
+                );
+                return;
+              }
+              const payload = { type: 'create-lobby', quiz };
+              if (new Blob([JSON.stringify(payload)]).size > 1_048_576) {
+                setHostError(
+                  'This quiz is too large to host (over 1 MB). Remove some questions and try again.',
+                );
+                return;
+              }
+              setHostError('');
+              send(payload);
+            }}
+          >
+            Create lobby
+          </Button>
+        </Stack>
         {code !== null && (
           <Stack gap={0} mt="md">
+            {lobbyQuizTitle && <Text c="dimmed">Quiz: {lobbyQuizTitle}</Text>}
             <Text c="dimmed">Join code</Text>
             <Title order={1}>{code}</Title>
             <Text fw={500} mt="md">
@@ -113,7 +269,28 @@ export function HostPage() {
                 ))}
               </List>
             )}
+            {gameStarted ? (
+              <Text c="green" mt="md">
+                Quiz started. Players can now play.
+              </Text>
+            ) : (
+              <Button
+                mt="md"
+                disabled={!connected || players.length === 0}
+                onClick={() => {
+                  setHostError('');
+                  send({ type: 'start-game' });
+                }}
+              >
+                Start quiz
+              </Button>
+            )}
           </Stack>
+        )}
+        {hostError && (
+          <Text c="red" role="alert">
+            {hostError}
+          </Text>
         )}
       </Paper>
 
@@ -126,7 +303,7 @@ export function HostPage() {
         ) : (
           <Stack gap={4}>
             {addresses.map((ip) => (
-              <Code key={ip}>{`${location.protocol}//${ip}${port}/test`}</Code>
+              <Code key={ip}>{`${location.protocol}//${ip}${port}/play`}</Code>
             ))}
           </Stack>
         )}
