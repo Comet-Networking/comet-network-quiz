@@ -1,7 +1,13 @@
 import { Elysia, t } from 'elysia';
 import { GameManager } from './game';
 import { lanAddresses } from './network';
-import { loadQuiz, QuizError, saveQuiz, updateQuiz } from './quizzes';
+import {
+  listQuizzes,
+  loadQuiz,
+  QuizError,
+  saveQuiz,
+  updateQuiz,
+} from './quizzes';
 
 function canEditQuiz(request: Request): boolean {
   const key = process.env['QUIZ_ADMIN_KEY'];
@@ -44,6 +50,7 @@ function createApi() {
     })
     .get('/health', () => ({ status: 'ok' as const }))
     .get('/info', () => ({ addresses: lanAddresses() }))
+    .get('/quizzes', async () => ({ quizzes: await listQuizzes() }))
     .get('/quizzes/:id/info', async ({ params }) => {
       const quiz = await loadQuiz(params.id);
 
@@ -96,6 +103,7 @@ function createApi() {
           {
             type: t.Literal('create-lobby'),
             quiz: t.Optional(HostedQuiz),
+            quizId: t.Optional(Id),
           },
           strict,
         ),
@@ -193,13 +201,38 @@ function createApi() {
       close(socket) {
         game.disconnect(socket.id);
       },
-      message(socket, message) {
+      async message(socket, message) {
         if (message.type === 'ping') {
           socket.send({ type: 'pong', requestId: message.requestId });
           return;
         }
         if (message.type === 'create-lobby') {
-          const lobby = game.create(socket.id, message.quiz);
+          if (message.quiz && message.quizId) {
+            socket.send({
+              type: 'error',
+              message: 'Choose either a server quiz or a custom quiz.',
+            });
+            return;
+          }
+          let quiz = message.quiz;
+          if (message.quizId) {
+            try {
+              const loaded = await loadQuiz(message.quizId);
+              quiz = { ...loaded, id: message.quizId };
+            } catch (error) {
+              if (!game.isConnected(socket.id)) return;
+              socket.send({
+                type: 'error',
+                message:
+                  error instanceof QuizError
+                    ? error.message
+                    : 'Could not load quiz.',
+              });
+              return;
+            }
+            if (!game.isConnected(socket.id)) return;
+          }
+          const lobby = game.create(socket.id, quiz);
           if (!lobby) return;
           socket.send({
             type: 'lobby-created',

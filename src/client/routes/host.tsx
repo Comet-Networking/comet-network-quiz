@@ -14,77 +14,17 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 
 import { Link } from '../components/Link';
+import {
+  readSavedQuizzes,
+  type Quiz,
+  type ServerQuizSummary,
+} from '../quizStorage';
 import { isServerMessage, useSocket, type Said } from '../useSocket';
 
 export const Route = createFileRoute('/host')({ component: HostPage });
 
-interface SavedQuiz {
-  id: string;
-  title: string;
-  questions: {
-    id: string;
-    prompt: string;
-    choices: [string, string, string, string];
-    correctChoice: number;
-  }[];
-}
-
-function isSavedQuiz(value: unknown): value is SavedQuiz {
-  if (typeof value !== 'object' || value === null) return false;
-  if (
-    !('id' in value) ||
-    typeof value.id !== 'string' ||
-    value.id.trim().length === 0 ||
-    !('title' in value) ||
-    typeof value.title !== 'string' ||
-    value.title.trim().length === 0 ||
-    !('questions' in value) ||
-    !Array.isArray(value.questions) ||
-    value.questions.length === 0
-  ) {
-    return false;
-  }
-  const seenIds = new Set<string>();
-  return value.questions.every((question: unknown) => {
-    if (typeof question !== 'object' || question === null) return false;
-    if (
-      !('id' in question) ||
-      typeof question.id !== 'string' ||
-      question.id.trim().length === 0 ||
-      seenIds.has(question.id.trim())
-    ) {
-      return false;
-    }
-    seenIds.add(question.id.trim());
-    return (
-      'prompt' in question &&
-      typeof question.prompt === 'string' &&
-      question.prompt.trim().length > 0 &&
-      'choices' in question &&
-      Array.isArray(question.choices) &&
-      question.choices.length === 4 &&
-      question.choices.every(
-        (choice) => typeof choice === 'string' && choice.trim().length > 0,
-      ) &&
-      'correctChoice' in question &&
-      typeof question.correctChoice === 'number' &&
-      Number.isInteger(question.correctChoice) &&
-      question.correctChoice >= 0 &&
-      question.correctChoice < 4
-    );
-  });
-}
-
-function readSavedQuizzes(): SavedQuiz[] {
-  try {
-    const saved: unknown = JSON.parse(
-      localStorage.getItem('comet-network-quiz:custom-quizzes') ?? '[]',
-    );
-    return Array.isArray(saved) ? saved.filter(isSavedQuiz) : [];
-  } catch {
-    return [];
-  }
-}
+const SERVER_PREFIX = 'server:';
+const LOCAL_PREFIX = 'local:';
 
 function isLobbyCreated(
   value: unknown,
@@ -116,9 +56,11 @@ function isLobbyUpdate(
 export function HostPage() {
   const [addresses, setAddresses] = useState<string[]>([]);
   const [log, setLog] = useState<Said[]>([]);
-  const [quizzes] = useState(readSavedQuizzes);
-  const [selectedQuizId, setSelectedQuizId] = useState<string | null>(
-    quizzes[0]?.id ?? null,
+  const [localQuizzes] = useState<Quiz[]>(readSavedQuizzes);
+  const [serverQuizzes, setServerQuizzes] = useState<ServerQuizSummary[]>([]);
+  const [loadingQuizzes, setLoadingQuizzes] = useState(true);
+  const [selectedQuiz, setSelectedQuiz] = useState<string | null>(
+    localQuizzes[0] ? `${LOCAL_PREFIX}${localQuizzes[0].id}` : null,
   );
 
   // The join code from the server. null = no lobby created yet.
@@ -192,6 +134,51 @@ export function HostPage() {
       });
   }, []);
 
+  useEffect(() => {
+    fetch('/api/quizzes')
+      .then((r) => r.json())
+      .then((d: { quizzes?: ServerQuizSummary[] }) => {
+        const list = Array.isArray(d.quizzes) ? d.quizzes : [];
+        setServerQuizzes(list);
+        if (list[0]) {
+          const firstServer = `${SERVER_PREFIX}${list[0].id}`;
+          setSelectedQuiz((current) => current ?? firstServer);
+        }
+      })
+      .catch(() => {
+        setServerQuizzes([]);
+      })
+      .finally(() => {
+        setLoadingQuizzes(false);
+      });
+  }, []);
+
+  const quizGroups = [
+    ...(serverQuizzes.length > 0
+      ? [
+          {
+            group: 'Server quizzes',
+            items: serverQuizzes.map((quiz) => ({
+              value: `${SERVER_PREFIX}${quiz.id}`,
+              label: `${quiz.title} (${String(quiz.questionCount)} question${quiz.questionCount === 1 ? '' : 's'})`,
+            })),
+          },
+        ]
+      : []),
+    ...(localQuizzes.length > 0
+      ? [
+          {
+            group: 'Saved on this device',
+            items: localQuizzes.map((quiz) => ({
+              value: `${LOCAL_PREFIX}${quiz.id}`,
+              label: `${quiz.title} (${String(quiz.questions.length)} question${quiz.questions.length === 1 ? '' : 's'})`,
+            })),
+          },
+        ]
+      : []),
+  ];
+
+  const hasQuizzes = serverQuizzes.length > 0 || localQuizzes.length > 0;
   const port = location.port ? `:${location.port}` : '';
 
   return (
@@ -207,26 +194,30 @@ export function HostPage() {
         <Stack gap="sm">
           <Select
             label="Quiz to host"
-            placeholder="Select a quiz"
-            data={quizzes.map((quiz) => ({
-              value: quiz.id,
-              label: `${quiz.title} (${String(quiz.questions.length)} questions)`,
-            }))}
-            value={selectedQuizId}
-            onChange={setSelectedQuizId}
-            disabled={quizzes.length === 0 || code !== null}
+            placeholder={loadingQuizzes ? 'Loading quizzes…' : 'Select a quiz'}
+            data={quizGroups}
+            value={selectedQuiz}
+            onChange={setSelectedQuiz}
+            disabled={!hasQuizzes || code !== null}
           />
-          {quizzes.length === 0 && (
+          {!loadingQuizzes && !hasQuizzes && (
             <Text c="dimmed">
-              No saved quizzes found. <Link to="/quizzes">Create one</Link>{' '}
-              first.
+              No quizzes found. <Link to="/quizzes">Create one</Link> first.
             </Text>
           )}
           <Button
             w="fit-content"
-            disabled={!connected || !selectedQuizId || code !== null}
+            disabled={!connected || !selectedQuiz || code !== null}
             onClick={() => {
-              const quiz = quizzes.find((item) => item.id === selectedQuizId);
+              if (!selectedQuiz) return;
+              if (selectedQuiz.startsWith(SERVER_PREFIX)) {
+                const quizId = selectedQuiz.slice(SERVER_PREFIX.length);
+                setHostError('');
+                send({ type: 'create-lobby', quizId });
+                return;
+              }
+              const localId = selectedQuiz.slice(LOCAL_PREFIX.length);
+              const quiz = localQuizzes.find((item) => item.id === localId);
               if (!quiz) return;
               if (
                 quiz.id.length > 64 ||
@@ -288,7 +279,7 @@ export function HostPage() {
           </Stack>
         )}
         {hostError && (
-          <Text c="red" role="alert">
+          <Text c="red" role="alert" mt="sm">
             {hostError}
           </Text>
         )}

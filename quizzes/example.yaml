@@ -1,6 +1,6 @@
 $schema: ./quiz.schema.yaml
-id: format-example
-title: Format example (not loaded)
+id: example
+title: Networking Basics (Example)
 questions:
   - id: q1
     prompt: Which protocol does this project use for persistent messages?

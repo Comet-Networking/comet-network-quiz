@@ -4,96 +4,80 @@ import {
   Code,
   FileInput,
   Group,
+  PasswordInput,
   Radio,
+  SegmentedControl,
   Stack,
   Text,
   TextInput,
   Title,
 } from '@mantine/core';
 import { createFileRoute } from '@tanstack/react-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+import {
+  createId,
+  isQuiz,
+  readSavedQuizzes,
+  writeSavedQuizzes,
+  type Quiz,
+  type QuizQuestion,
+  type ServerQuizSummary,
+} from '../quizStorage';
 
 export const Route = createFileRoute('/quizzes')({ component: QuizzesPage });
 
-interface QuizQuestion {
-  id: string;
-  prompt: string;
-  choices: string[];
-  correctChoice: number;
-}
+type SaveTarget = 'browser' | 'server';
 
-interface Quiz {
-  id: string;
-  title: string;
-  questions: QuizQuestion[];
+async function fetchServerQuizzes(): Promise<ServerQuizSummary[] | null> {
+  try {
+    const response = await fetch('/api/quizzes');
+    if (!response.ok) return null;
+    const data = (await response.json()) as { quizzes?: ServerQuizSummary[] };
+    return Array.isArray(data.quizzes) ? data.quizzes : null;
+  } catch {
+    return null;
+  }
 }
-
-const STORAGE_KEY = 'comet-network-quiz:custom-quizzes';
 
 function blankQuestion(): QuizQuestion {
   return {
-    id: crypto.randomUUID(),
+    id: createId(),
     prompt: '',
     choices: ['', '', '', ''],
     correctChoice: 0,
   };
 }
 
-function readSavedQuizzes(): Quiz[] {
-  try {
-    const saved: unknown = JSON.parse(
-      localStorage.getItem(STORAGE_KEY) ?? '[]',
-    );
-    return Array.isArray(saved) ? saved.filter(isQuiz) : [];
-  } catch {
-    return [];
-  }
-}
-
-function isQuiz(value: unknown): value is Quiz {
-  if (!value || typeof value !== 'object') return false;
-  const quiz = value as Partial<Quiz>;
-  return (
-    typeof quiz.id === 'string' &&
-    quiz.id.length > 0 &&
-    typeof quiz.title === 'string' &&
-    quiz.title.length > 0 &&
-    Array.isArray(quiz.questions) &&
-    quiz.questions.length > 0 &&
-    quiz.questions.every((value: unknown) => {
-      if (!value || typeof value !== 'object') return false;
-      const question = value as Partial<QuizQuestion>;
-      return (
-        typeof question.id === 'string' &&
-        question.id.length > 0 &&
-        typeof question.prompt === 'string' &&
-        question.prompt.length > 0 &&
-        Array.isArray(question.choices) &&
-        question.choices.length === 4 &&
-        question.choices.every(
-          (choice) => typeof choice === 'string' && choice.length > 0,
-        ) &&
-        typeof question.correctChoice === 'number' &&
-        Number.isInteger(question.correctChoice) &&
-        question.correctChoice >= 0 &&
-        question.correctChoice <= 3
-      );
-    })
-  );
-}
-
 export function QuizzesPage() {
+  const [saveTarget, setSaveTarget] = useState<SaveTarget>('browser');
+  const [quizId, setQuizId] = useState('');
   const [title, setTitle] = useState('');
+  const [adminKey, setAdminKey] = useState('');
+  const [saving, setSaving] = useState(false);
   const [questions, setQuestions] = useState<QuizQuestion[]>([blankQuestion()]);
   const [savedQuizzes, setSavedQuizzes] = useState<Quiz[]>(readSavedQuizzes);
   const savedQuizzesRef = useRef(savedQuizzes);
+  const [serverQuizzes, setServerQuizzes] = useState<ServerQuizSummary[]>([]);
   const [message, setMessage] = useState('');
 
-  function saveQuizzes(update: (current: Quiz[]) => Quiz[]): boolean {
+  useEffect(() => {
+    let cancelled = false;
+    fetchServerQuizzes()
+      .then((list) => {
+        if (!cancelled && list) setServerQuizzes(list);
+      })
+      .catch(() => {
+        // Keep existing server quiz list if the server is temporarily unreachable.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function saveBrowserQuizzes(update: (current: Quiz[]) => Quiz[]): boolean {
     const nextQuizzes = update(savedQuizzesRef.current);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextQuizzes));
-    } catch {
+    if (!writeSavedQuizzes(nextQuizzes)) {
       setMessage(
         'Could not save quizzes on this device. Your changes were kept.',
       );
@@ -119,12 +103,12 @@ export function QuizzesPage() {
   ) {
     const question = questions[questionIndex];
     if (!question) return;
-    const choices = [...question.choices];
+    const choices: [string, string, string, string] = [...question.choices];
     choices[choiceIndex] = value;
     updateQuestion(questionIndex, { choices });
   }
 
-  function saveQuiz() {
+  async function saveQuiz() {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
       setMessage('Give your quiz a title.');
@@ -143,19 +127,82 @@ export function QuizzesPage() {
       return;
     }
 
-    const quiz: Quiz = {
-      id: crypto.randomUUID(),
-      title: trimmedTitle,
-      questions: questions.map((question) => ({
-        ...question,
-        prompt: question.prompt.trim(),
-        choices: question.choices.map((choice) => choice.trim()),
-      })),
-    };
-    if (!saveQuizzes((current) => [quiz, ...current])) return;
-    setTitle('');
-    setQuestions([blankQuestion()]);
-    setMessage('Quiz saved on this device.');
+    const cleanedQuestions: QuizQuestion[] = questions.map(
+      (question, index) => {
+        const [c0, c1, c2, c3] = question.choices.map((choice) =>
+          choice.trim(),
+        ) as [string, string, string, string];
+        return {
+          id: saveTarget === 'server' ? `q${String(index + 1)}` : question.id,
+          prompt: question.prompt.trim(),
+          choices: [c0, c1, c2, c3],
+          correctChoice: question.correctChoice,
+        };
+      },
+    );
+
+    if (saveTarget === 'browser') {
+      const quiz: Quiz = {
+        id: createId(),
+        title: trimmedTitle,
+        questions: cleanedQuestions,
+      };
+      if (!saveBrowserQuizzes((current) => [quiz, ...current])) return;
+      setTitle('');
+      setQuestions([blankQuestion()]);
+      setMessage('Quiz saved on this device.');
+      return;
+    }
+
+    const trimmedId = quizId.trim();
+    if (!trimmedId || !adminKey.trim()) {
+      setMessage(
+        'Enter a quiz ID and administrator key to save to the server.',
+      );
+      return;
+    }
+    if (!/^[a-zA-Z0-9_-]+$/.test(trimmedId)) {
+      setMessage(
+        'Use letters, numbers, hyphens, or underscores for the quiz ID.',
+      );
+      return;
+    }
+    if (saving) return;
+
+    setSaving(true);
+    setMessage('');
+    try {
+      const response = await fetch('/api/quizzes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-quiz-admin-key': adminKey,
+        },
+        body: JSON.stringify({
+          id: trimmedId,
+          title: trimmedTitle,
+          questions: cleanedQuestions,
+        }),
+      });
+
+      if (response.ok) {
+        setQuizId('');
+        setTitle('');
+        setQuestions([blankQuestion()]);
+        setMessage('Quiz saved to the server.');
+        const list = await fetchServerQuizzes();
+        if (list) setServerQuizzes(list);
+      } else {
+        const result = (await response.json()) as { error?: string };
+        setMessage(
+          result.error ?? `Failed to save quiz (${String(response.status)}).`,
+        );
+      }
+    } catch {
+      setMessage('Could not connect to the server.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function importQuiz(file: File | null) {
@@ -166,7 +213,7 @@ export function QuizzesPage() {
         setMessage('That file does not match the quiz format.');
         return;
       }
-      const saved = saveQuizzes((current) => [
+      const saved = saveBrowserQuizzes((current) => [
         imported,
         ...current.filter((quiz) => quiz.id !== imported.id),
       ]);
@@ -180,9 +227,51 @@ export function QuizzesPage() {
     <Stack maw={680}>
       <Title order={2}>Create a quiz</Title>
       <Text>
-        Write questions, enter four choices, and select the correct answer for
-        each question.
+        Write questions, enter four choices, and select the correct answer. Save
+        locally in this browser or store a YAML quiz on the server.
       </Text>
+
+      <Stack gap={4}>
+        <Text size="sm" fw={500}>
+          Save destination
+        </Text>
+        <SegmentedControl
+          value={saveTarget}
+          onChange={(value) => {
+            setSaveTarget(value === 'server' ? 'server' : 'browser');
+            setMessage('');
+          }}
+          data={[
+            { label: 'This device (browser)', value: 'browser' },
+            { label: 'Server (YAML)', value: 'server' },
+          ]}
+        />
+      </Stack>
+
+      {saveTarget === 'server' && (
+        <>
+          <TextInput
+            label="Quiz ID"
+            placeholder="network-basics"
+            description="Use letters, numbers, hyphens, or underscores."
+            value={quizId}
+            maxLength={64}
+            onChange={(event) => {
+              setQuizId(event.currentTarget.value);
+            }}
+          />
+          <PasswordInput
+            label="Administrator key"
+            placeholder="Enter your administrator key"
+            description="Required to save quizzes to the server."
+            value={adminKey}
+            onChange={(event) => {
+              setAdminKey(event.currentTarget.value);
+            }}
+          />
+        </>
+      )}
+
       <TextInput
         label="Quiz title"
         placeholder="For example, Network Basics"
@@ -192,6 +281,7 @@ export function QuizzesPage() {
           setTitle(event.currentTarget.value);
         }}
       />
+
       {questions.map((question, questionIndex) => (
         <Card key={question.id} withBorder>
           <Stack>
@@ -251,6 +341,7 @@ export function QuizzesPage() {
           </Stack>
         </Card>
       ))}
+
       <Group>
         <Button
           variant="default"
@@ -260,11 +351,21 @@ export function QuizzesPage() {
         >
           Add question
         </Button>
-        <Button onClick={saveQuiz}>Save quiz</Button>
+        <Button
+          loading={saving}
+          onClick={() => {
+            void saveQuiz().catch(() => {
+              setMessage('Could not save quiz.');
+            });
+          }}
+        >
+          {saveTarget === 'server' ? 'Save to server' : 'Save on this device'}
+        </Button>
       </Group>
+
       <FileInput
-        label="Upload a quiz file"
-        description="Import a quiz JSON file."
+        label="Import a quiz JSON file"
+        description="Adds a quiz JSON file to this browser."
         accept=".json,application/json"
         onChange={(file) => {
           void importQuiz(file).catch(() => {
@@ -277,9 +378,27 @@ export function QuizzesPage() {
       />
       {message && <Text role="status">{message}</Text>}
 
+      <Title order={3}>Server quizzes</Title>
+      {serverQuizzes.length === 0 ? (
+        <Text c="dimmed">No server quizzes found.</Text>
+      ) : (
+        serverQuizzes.map((quiz) => (
+          <Card key={quiz.id} withBorder>
+            <Stack gap={2}>
+              <Text fw={600}>{quiz.title}</Text>
+              <Text size="sm" c="dimmed">
+                {quiz.questionCount} question
+                {quiz.questionCount === 1 ? '' : 's'} · ID:{' '}
+                <Code>{quiz.id}</Code>
+              </Text>
+            </Stack>
+          </Card>
+        ))
+      )}
+
       <Title order={3}>Saved on this device</Title>
       {savedQuizzes.length === 0 ? (
-        <Text c="dimmed">No custom quizzes saved yet.</Text>
+        <Text c="dimmed">No custom quizzes saved in this browser yet.</Text>
       ) : (
         savedQuizzes.map((quiz) => (
           <Card key={quiz.id} withBorder>
@@ -295,7 +414,7 @@ export function QuizzesPage() {
                 variant="subtle"
                 color="red"
                 onClick={() => {
-                  saveQuizzes((current) =>
+                  saveBrowserQuizzes((current) =>
                     current.filter((saved) => saved.id !== quiz.id),
                   );
                 }}
@@ -306,10 +425,11 @@ export function QuizzesPage() {
           </Card>
         ))
       )}
+
       <Text size="sm" c="dimmed">
-        Each question stores the correct choice as <Code>correctChoice</Code>,
-        matching the project quiz schema. Quizzes are saved in this browser. You
-        can import a quiz JSON file if you already have one.
+        Both server YAML quizzes and browser-saved quizzes share the same schema
+        (using zero-based <Code>correctChoice</Code>) and can be hosted from the
+        Host page.
       </Text>
     </Stack>
   );
