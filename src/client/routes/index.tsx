@@ -1,5 +1,6 @@
-import { Button, Stack, Text, Title, Group } from '@mantine/core';
+import { Stack, Text, Title, Group } from '@mantine/core';
 import { createFileRoute } from '@tanstack/react-router';
+import { LinkButton } from '../components/Link';
 
 export const Route = createFileRoute('/')({ component: HomePage });
 
@@ -20,9 +21,9 @@ export function HomePage() {
       <Stack gap="md">
         <Title order={2}>Ready to get started?</Title>
 
-        <Button>Host a game</Button>
-        <Button>Join a game</Button>
-        <Button>Create a quiz</Button>
+        <LinkButton to="/host">Host a game</LinkButton>
+        <LinkButton to="/play">Join a game</LinkButton>
+        <LinkButton to="/quizzes">Create a quiz</LinkButton>
       </Stack>
     </Stack>
   );

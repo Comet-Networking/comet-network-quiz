@@ -206,7 +206,6 @@ export function HostPage() {
             </Text>
           )}
           <Button
-            w="fit-content"
             disabled={!connected || !selectedQuiz || code !== null}
             onClick={() => {
               if (!selectedQuiz) return;

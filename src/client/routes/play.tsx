@@ -50,6 +50,7 @@ export type ClientMessage =
 export interface Transport {
   send(msg: ClientMessage): void;
   subscribe(listener: (msg: ServerMessage) => void): () => void;
+  close(): void;
 }
 
 //structure for different message types (same as server messages, but remove the type field)
@@ -158,6 +159,14 @@ export function PlayerView({ transport }: { transport: Transport }) {
     setView({ ...view, answer: choice });
   };
 
+  //function to leave the game
+  const leaveGame = () => {
+    //close the web socket
+    transport.close();
+    //reset the view
+    setView({ name: 'join' });
+  };
+
   //change the screen based on the view useState
   switch (view.name) {
     case 'join':
@@ -169,7 +178,7 @@ export function PlayerView({ transport }: { transport: Transport }) {
     case 'reveal':
       return <RevealScreen view={view} />;
     case 'finished':
-      return <FinishedScreen view={view} />;
+      return <FinishedScreen view={view} leaveGame={leaveGame} />;
   }
 }
 
@@ -228,15 +237,13 @@ function JoinScreen({
 
 function LobbyScreen({ playerName }: { playerName: string }) {
   return (
-    <Center h="100%" p="md">
-      <Stack align="center" gap="sm">
-        <Loader />
-        <Title order={2}>
-          {playerName ? `You're in, ${playerName}` : "You're in"}
-        </Title>
-        <Text c="dimmed">Waiting for the host to start the game.</Text>
-      </Stack>
-    </Center>
+    <Stack align="center" gap="sm" mt="lg">
+      <Loader />
+      <Title order={2}>
+        {playerName ? `You're in, ${playerName}` : "You're in"}
+      </Title>
+      <Text c="dimmed">Waiting for the host to start the game.</Text>
+    </Stack>
   );
 }
 
@@ -269,7 +276,7 @@ function QuestionScreen({
   const locked = view.answer !== null || pct <= 0;
 
   return (
-    <Stack h="100%" gap={0}>
+    <Stack h="100%" gap={0} mt="lg">
       <Progress
         value={pct}
         size="md"
@@ -357,19 +364,20 @@ function RevealScreen({ view }: { view: Extract<View, { name: 'reveal' }> }) {
 
 function FinishedScreen({
   view,
+  leaveGame
 }: {
   view: Extract<View, { name: 'finished' }>;
+  leaveGame: () => void;
 }) {
   return (
-    <Center h="100%" p="md">
-      <Stack align="center" gap="xs">
-        <Title order={1}>Game over</Title>
-        <Text size="xl">
-          You finished {ordinal(view.rank)} of {view.players}
-        </Text>
-        <Text c="dimmed">Final score: {view.score}</Text>
-      </Stack>
-    </Center>
+    <Stack align="center" gap="xs" mt="lg">
+      <Title order={1}>Game over</Title>
+      <Text size="xl">
+        You finished {ordinal(view.rank)} of {view.players}
+      </Text>
+      <Text c="dimmed">Final score: {view.score}</Text>
+      <Button onClick={leaveGame}>Leave game</Button>
+    </Stack>
   );
 }
 
