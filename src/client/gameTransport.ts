@@ -99,11 +99,12 @@ export function createGameTransport(): Transport {
       ) {
         connect();
       }
-    }, close() {
+    },
+    close() {
       closing = true;
       pending.length = 0;
       socket?.close();
       socket = null;
-    }
+    },
   };
 }

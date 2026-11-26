@@ -1,4 +1,12 @@
-import { AppShell, Container, Group, Stack, Text, Image, Burger } from '@mantine/core';
+import {
+  AppShell,
+  Container,
+  Group,
+  Stack,
+  Text,
+  Image,
+  Burger,
+} from '@mantine/core';
 import { createRootRoute, Outlet } from '@tanstack/react-router';
 
 import { Link } from '../components/Link';
@@ -13,7 +21,7 @@ export const Route = createRootRoute({
 
 export function Layout() {
   const [opened, { toggle }] = useDisclosure();
-  
+
   return (
     <Container size="sm" py="xl">
       <Stack gap="xl">
@@ -28,7 +36,12 @@ export function Layout() {
         >
           <AppShell.Header>
             <Group h="100%" px="md" gap={10}>
-              <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
+              <Burger
+                opened={opened}
+                onClick={toggle}
+                hiddenFrom="sm"
+                size="sm"
+              />
               <Image src={cometsLogo} alt="MyApp logo" h={40} w="auto" />
               <Link
                 fw={700}
@@ -67,9 +80,15 @@ export function Layout() {
           </AppShell.Header>
           <AppShell.Navbar p="md">
             <Stack>
-              <Link to="/host" c="var(--mantine-color-dimmed)">Host</Link>
-              <Link to="/play" c="var(--mantine-color-dimmed)">Play</Link>
-              <Link to="/quizzes" c="var(--mantine-color-dimmed)">Quizzes</Link>
+              <Link to="/host" c="var(--mantine-color-dimmed)">
+                Host
+              </Link>
+              <Link to="/play" c="var(--mantine-color-dimmed)">
+                Play
+              </Link>
+              <Link to="/quizzes" c="var(--mantine-color-dimmed)">
+                Quizzes
+              </Link>
             </Stack>
           </AppShell.Navbar>
         </AppShell>

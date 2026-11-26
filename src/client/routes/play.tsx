@@ -364,7 +364,7 @@ function RevealScreen({ view }: { view: Extract<View, { name: 'reveal' }> }) {
 
 function FinishedScreen({
   view,
-  leaveGame
+  leaveGame,
 }: {
   view: Extract<View, { name: 'finished' }>;
   leaveGame: () => void;
