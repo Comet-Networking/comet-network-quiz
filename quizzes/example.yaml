@@ -10,3 +10,11 @@ questions:
       - FTP
       - DNS
     correctChoice: 0
+  - id: q2
+    prompt: What name of this app?
+    choices:
+      - Comet Network Quiz
+      - IDK
+      - Kahoot
+      - Quizlet
+    correctChoice: 0

@@ -182,7 +182,7 @@ export function HostPage() {
   const port = location.port ? `:${location.port}` : '';
 
   return (
-    <Stack>
+    <Stack mt="lg">
       <Group justify="space-between">
         <Title order={2}>Host a quiz</Title>
         <Badge color={connected ? 'green' : 'red'}>

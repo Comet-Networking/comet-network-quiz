@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import {
   Button,
   Center,
-  Container,
   Loader,
   Paper,
   Progress,
@@ -186,48 +185,44 @@ function JoinScreen({
   const ready = pin.trim().length > 0 && name.trim().length > 0;
 
   return (
-    <Center h="100%" p="md">
-      <Container size="xs" w="100%">
-        <Stack gap="md">
-          <Title order={2} ta="center">
-            Join a quiz
-          </Title>
-          <TextInput
-            label="Game PIN"
-            autoCapitalize="characters"
-            size="md"
-            value={pin}
-            onChange={(e) => {
-              setPin(e.currentTarget.value);
-            }}
-            error={error}
-          />
-          <TextInput
-            label="Your name"
-            size="md"
-            maxLength={20}
-            value={name}
-            onChange={(e) => {
-              setName(e.currentTarget.value);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && ready) {
-                onJoin(pin.trim(), name.trim());
-              }
-            }}
-          />
-          <Button
-            size="lg"
-            disabled={!ready}
-            onClick={() => {
-              onJoin(pin.trim(), name.trim());
-            }}
-          >
-            Join game
-          </Button>
-        </Stack>
-      </Container>
-    </Center>
+    <Stack gap="md" mt="lg">
+      <Title order={2} ta="center">
+        Join a quiz
+      </Title>
+      <TextInput
+        label="Game PIN"
+        autoCapitalize="characters"
+        size="md"
+        value={pin}
+        onChange={(e) => {
+          setPin(e.currentTarget.value);
+        }}
+        error={error}
+      />
+      <TextInput
+        label="Your name"
+        size="md"
+        maxLength={20}
+        value={name}
+        onChange={(e) => {
+          setName(e.currentTarget.value);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && ready) {
+            onJoin(pin.trim(), name.trim());
+          }
+        }}
+      />
+      <Button
+        size="lg"
+        disabled={!ready}
+        onClick={() => {
+          onJoin(pin.trim(), name.trim());
+        }}
+      >
+        Join game
+      </Button>
+    </Stack>
   );
 }
 

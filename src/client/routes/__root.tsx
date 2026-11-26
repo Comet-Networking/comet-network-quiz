@@ -1,7 +1,9 @@
-import { Container, Group, Stack, Text, Title } from '@mantine/core';
+import { AppShell, Container, Group, Stack, Text, Image } from '@mantine/core';
 import { createRootRoute, Outlet } from '@tanstack/react-router';
 
 import { Link } from '../components/Link';
+import classes from '../css/Link.module.css';
+import cometsLogo from '../assets/comets-logo.svg';
 
 export const Route = createRootRoute({
   component: Layout,
@@ -12,18 +14,53 @@ export function Layout() {
   return (
     <Container size="sm" py="xl">
       <Stack gap="xl">
-        <header>
-          <Title order={1} size="h2" mb="md">
-            Comet Network Quiz
-          </Title>
-          <Group component="nav" aria-label="Main navigation" gap="lg">
-            <Link to="/">Home</Link>
-            <Link to="/host">Host</Link>
-            <Link to="/play">Play</Link>
-            <Link to="/quizzes">Quizzes</Link>
-            <Link to="/test">Test</Link>
-          </Group>
-        </header>
+        <AppShell
+          header={{ height: 60 }}
+          navbar={{
+            width: 250,
+            breakpoint: 'sm',
+          }}
+          padding="md"
+        >
+          <AppShell.Header>
+            <Group h="100%" px="md" gap={10}>
+              <Image src={cometsLogo} alt="MyApp logo" h={40} w="auto" />
+              <Link
+                fw={700}
+                size="lg"
+                pr={10}
+                underline="never"
+                to="/"
+                c="black"
+              >
+                Comet Quiz
+              </Link>
+
+              <Group
+                component="nav"
+                aria-label="Main navigation"
+                gap={0}
+                h="100%"
+                align="stretch"
+                visibleFrom="sm"
+              >
+                <Link to="/host" className={classes['link']} underline="never">
+                  Host
+                </Link>
+                <Link to="/play" className={classes['link']} underline="never">
+                  Play
+                </Link>
+                <Link
+                  to="/quizzes"
+                  className={classes['link']}
+                  underline="never"
+                >
+                  Quizzes
+                </Link>
+              </Group>
+            </Group>
+          </AppShell.Header>
+        </AppShell>
         <main>
           <Outlet />
         </main>
