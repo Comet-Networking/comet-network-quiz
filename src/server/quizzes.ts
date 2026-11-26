@@ -1,4 +1,4 @@
-import { writeFile } from 'node:fs/promises';
+import { readdir, writeFile } from 'node:fs/promises';
 import Ajv2020 from 'ajv/dist/2020.js';
 
 export interface Quiz {
@@ -7,9 +7,15 @@ export interface Quiz {
   questions: {
     id: string;
     prompt: string;
-    choices: string[];
+    choices: [string, string, string, string];
     correctChoice: number;
   }[];
+}
+
+export interface QuizSummary {
+  id: string;
+  title: string;
+  questionCount: number;
 }
 
 export class QuizError extends Error {
@@ -22,6 +28,7 @@ export class QuizError extends Error {
 }
 
 const ajv = new Ajv2020();
+const quizzesDir = new URL('../../quizzes/', import.meta.url);
 const schemaPath = new URL('../../quizzes/quiz.schema.yaml', import.meta.url);
 const schema = Bun.YAML.parse(await Bun.file(schemaPath).text()) as object;
 const validate = ajv.compile<Quiz>(schema);
@@ -40,6 +47,34 @@ function quizPath(id: string): URL {
     throw new QuizError(400, 'Invalid quiz ID');
   }
   return new URL(`../../quizzes/${id}.yaml`, import.meta.url);
+}
+
+export async function listQuizzes(): Promise<QuizSummary[]> {
+  let entries: string[];
+  try {
+    entries = await readdir(quizzesDir);
+  } catch {
+    return [];
+  }
+
+  const summaries: QuizSummary[] = [];
+  for (const entry of entries) {
+    if (!entry.endsWith('.yaml') || entry === 'quiz.schema.yaml') continue;
+    const id = entry.slice(0, -'.yaml'.length);
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) continue;
+    try {
+      const quiz = await loadQuiz(id);
+      summaries.push({
+        id,
+        title: quiz.title,
+        questionCount: quiz.questions.length,
+      });
+    } catch {
+      // Skip unreadable or invalid quiz files.
+    }
+  }
+  summaries.sort((a, b) => a.title.localeCompare(b.title));
+  return summaries;
 }
 
 export async function loadQuiz(id: string): Promise<Quiz> {

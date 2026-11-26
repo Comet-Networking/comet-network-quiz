@@ -95,6 +95,10 @@ export class GameManager {
     this.connections.set(id, { send });
   }
 
+  isConnected(id: string): boolean {
+    return this.connections.has(id);
+  }
+
   create(id: string, quiz?: HostedQuiz): Lobby | null {
     const connection = this.connections.get(id);
     const sanitized = quiz ? sanitizeQuiz(quiz) : undefined;
