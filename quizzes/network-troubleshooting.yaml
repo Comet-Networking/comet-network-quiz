@@ -1,0 +1,47 @@
+id: network-troubleshooting
+title: Networking Troubleshooting
+questions:
+  - id: q1
+    prompt: Which command is commonly used to test whether a remote device is reachable over IP?
+    choices:
+      - ipconfig
+      - netstat
+      - ping
+      - nslookup
+    correctChoice: 2
+
+  - id: q2
+    prompt: Which tool shows the routers a packet passes through on its way to a destination?
+    choices:
+      - tracert
+      - ipconfig
+      - arp
+      - hostname
+    correctChoice: 0
+
+  - id: q3
+    prompt: What does packet loss mean?
+    choices:
+      - Packets arrive faster than expected
+      - Some packets fail to reach their destination
+      - A device receives a new IP address
+      - DNS records have expired
+    correctChoice: 1
+
+  - id: q4
+    prompt: Which tool is commonly used to capture and analyze network packets?
+    choices:
+      - Task Manager
+      - Device Manager
+      - Disk Management
+      - Wireshark
+    correctChoice: 3
+
+  - id: q5
+    prompt: What does high network latency indicate?
+    choices:
+      - A larger subnet mask
+      - A higher bandwidth connection
+      - A longer delay in data transmission
+      - A stronger wireless signal
+    correctChoice: 2

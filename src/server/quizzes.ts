@@ -1,4 +1,4 @@
-import { readdir, writeFile } from 'node:fs/promises';
+import { readdir, unlink, writeFile } from 'node:fs/promises';
 import Ajv2020 from 'ajv/dist/2020.js';
 
 export interface Quiz {
@@ -111,4 +111,17 @@ export async function updateQuiz(id: string, quiz: unknown): Promise<void> {
     throw new QuizError(404, 'Quiz not found');
   }
   await Bun.write(path, Bun.YAML.stringify(quiz, null, 2));
+}
+
+export async function deleteQuiz(id: string): Promise<void> {
+  const path = quizPath(id);
+
+  try {
+    await unlink(path);
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      throw new QuizError(404, 'Quiz not found');
+    }
+    throw error;
+  }
 }
