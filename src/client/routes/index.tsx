@@ -9,7 +9,7 @@ export function HomePage() {
     <Stack gap="xl" mt="lg">
       <Group gap={5}>
         <Title order={2}>What is Comet Quiz?</Title>
-        <Text>
+        <Text c="var(--mantine-color-dimmed)">
           Comet Quiz is a quiz app that allows you to host or play games on your
           local network. The host creates a game and shares a game code. Players
           join from their own device by entering the code and their name. Once

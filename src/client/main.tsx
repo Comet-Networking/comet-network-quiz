@@ -12,7 +12,7 @@ const router = createRouter({ routeTree });
 const theme = createTheme({
   components: {
     Button: Button.extend({
-      defaultProps: { h: 50, fz: 16 },
+      defaultProps: { h: 50, fz: 16},
     }),
   },
 });

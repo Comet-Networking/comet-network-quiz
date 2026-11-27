@@ -13,6 +13,7 @@ import {
 } from '@mantine/core';
 import { createFileRoute } from '@tanstack/react-router';
 import { createGameTransport } from '../gameTransport';
+import { ShapeIcon } from '../components/ShapeIcon';
 
 export interface PlayerQuestion {
   id: string;
@@ -249,10 +250,11 @@ function LobbyScreen({ playerName }: { playerName: string }) {
 
 //keep track of the time remaining per question
 function useRemaining(endsAt: number, durationMs: number) {
-  const [pct, setPct] = useState(100);
+  const [remainingMs, setRemainingMs] = useState(durationMs);
+
   useEffect(() => {
     const tick = () => {
-      setPct(Math.max(0, ((endsAt - Date.now()) / durationMs) * 100));
+      setRemainingMs(Math.max(0, endsAt - Date.now()));
     };
     tick();
     const id = setInterval(tick, 100);
@@ -260,7 +262,11 @@ function useRemaining(endsAt: number, durationMs: number) {
       clearInterval(id);
     };
   }, [endsAt, durationMs]);
-  return pct;
+
+  return {
+    pct: (remainingMs / durationMs) * 100,
+    seconds: remainingMs / 1000,
+  };
 }
 
 function QuestionScreen({
@@ -271,7 +277,7 @@ function QuestionScreen({
   onAnswer: (choice: number) => void;
 }) {
   //keep track of time remaining
-  const pct = useRemaining(view.endsAt, view.durationMs);
+  const { pct, seconds }= useRemaining(view.endsAt, view.durationMs);
   //variable to stop the player from answering if they already answered or the time is up
   const locked = view.answer !== null || pct <= 0;
 
@@ -280,11 +286,11 @@ function QuestionScreen({
       <Progress
         value={pct}
         size="md"
-        radius={0}
+        radius="md"
         color={pct > 25 ? 'blue' : 'red'}
       />
-
       <Stack flex={1} justify="center" p="md" gap="xs">
+        <Text c="black" ta="center">Time left: {Math.ceil(seconds)}s</Text>
         <Text c="dimmed" ta="center" size="sm">
           Question {view.index + 1} of {view.total}
         </Text>
@@ -304,20 +310,28 @@ function QuestionScreen({
           return (
             <Button
               key={i}
+              c="white"
               color={COLORS[i] ?? 'gray'}
               autoContrast
-              h={120}
+              mih={120}
+              h="auto"
+              py="sm"
               radius="md"
+              justify="flex-start"
               disabled={locked && !picked}
               variant={picked || !locked ? 'filled' : 'light'}
-              onClick={() => {
-                onAnswer(i);
-              }}
-              leftSection={<span aria-hidden>{SHAPES[i]}</span>}
+              onClick={() => onAnswer(i)}
+              leftSection={<ShapeIcon index={i} />}
               styles={{
+                root: { minWidth: 0 },
+                inner: { minWidth: 0, width: '100%' },
+                section: { flexShrink: 0 },
                 label: {
+                  minWidth: 0,
                   whiteSpace: 'normal',
+                  overflowWrap: 'anywhere',
                   textAlign: 'left',
+                  lineHeight: 1.25,
                   fontSize: 'var(--mantine-font-size-lg)',
                 },
               }}
@@ -340,7 +354,7 @@ function RevealScreen({ view }: { view: Extract<View, { name: 'reveal' }> }) {
       : 'Incorrect';
 
   return (
-    <Center h="100%" p="md" bg={view.correct ? 'green.7' : 'red.7'} c="white">
+    <Center h="100%" p="md" bg={view.correct ? 'green.7' : 'red.7'} c="white" mt="lg" bdrs="md">
       <Stack align="center" gap="md" maw={480}>
         <Title order={1}>{headline}</Title>
         {view.correct ? (
