@@ -1,4 +1,3 @@
-
 id: network-basics
 title: Networking Basics
 questions:
@@ -41,8 +40,8 @@ questions:
   - id: q5
     prompt: What is the default port for HTTPS?
     choices:
-      - "22"
-      - "53"
-      - "443"
-      - "80"
+      - '22'
+      - '53'
+      - '443'
+      - '80'
     correctChoice: 2
