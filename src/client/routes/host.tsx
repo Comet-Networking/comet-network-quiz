@@ -19,7 +19,8 @@ import {
   type Quiz,
   type ServerQuizSummary,
 } from '../quizStorage';
-import { isServerMessage, useSocket, type Said } from '../useSocket';
+import { useSocket } from '../useSocket';
+import { CopyableText } from '../components/CopyText';
 
 export const Route = createFileRoute('/host')({ component: HostPage });
 
@@ -55,7 +56,6 @@ function isLobbyUpdate(
 
 export function HostPage() {
   const [addresses, setAddresses] = useState<string[]>([]);
-  const [log, setLog] = useState<Said[]>([]);
   const [localQuizzes] = useState<Quiz[]>(readSavedQuizzes);
   const [serverQuizzes, setServerQuizzes] = useState<ServerQuizSummary[]>([]);
   const [loadingQuizzes, setLoadingQuizzes] = useState(true);
@@ -107,8 +107,6 @@ export function HostPage() {
       );
       return;
     }
-    if (!isServerMessage(msg)) return;
-    setLog((l) => [...l, msg]);
   });
 
   const wasConnected = useRef(false);
@@ -247,6 +245,10 @@ export function HostPage() {
             {lobbyQuizTitle && <Text c="dimmed">Quiz: {lobbyQuizTitle}</Text>}
             <Text c="dimmed">Join code</Text>
             <Title order={1}>{code}</Title>
+            <Text c="dimmed">Sharable link (click to copy)</Text>
+            <CopyableText
+              text={`${location.protocol}//${addresses[0] ?? ''}${port}/play?code=${code}`}
+            />
             <Text fw={500} mt="md">
               Players ({players.length})
             </Text>
@@ -296,21 +298,6 @@ export function HostPage() {
               <Code key={ip}>{`${location.protocol}//${ip}${port}/play`}</Code>
             ))}
           </Stack>
-        )}
-      </Paper>
-
-      <Paper withBorder p="md">
-        <Text fw={500} mb="xs">
-          Incoming messages
-        </Text>
-        {log.length === 0 ? (
-          <Text c="dimmed">Nothing yet.</Text>
-        ) : (
-          <List spacing="xs">
-            {log.map((m, i) => (
-              <List.Item key={i}>{m.text}</List.Item>
-            ))}
-          </List>
         )}
       </Paper>
     </Stack>

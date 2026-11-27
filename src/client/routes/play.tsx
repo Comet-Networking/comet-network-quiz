@@ -71,7 +71,12 @@ type View =
 const COLORS = ['red', 'blue', 'yellow', 'green'] as const;
 const SHAPES = ['▲', '◆', '●', '■'] as const;
 
-export const Route = createFileRoute('/play')({ component: PlayRoute });
+export const Route = createFileRoute('/play')({
+  validateSearch: (search: Record<string, unknown>): { code?: string } => ({
+    ...(typeof search['code'] === 'string' ? { code: search['code'] } : {}),
+  }),
+  component: PlayRoute,
+});
 
 function PlayRoute() {
   // useState keeps one transport for the lifetime of the page.
@@ -190,7 +195,8 @@ function JoinScreen({
   error?: string | undefined;
   onJoin: (pin: string, name: string) => void;
 }) {
-  const [pin, setPin] = useState('');
+  const { code } = Route.useSearch();
+  const [pin, setPin] = useState(code ?? '');
   const [name, setName] = useState('');
   const ready = pin.trim().length > 0 && name.trim().length > 0;
 
@@ -277,7 +283,7 @@ function QuestionScreen({
   onAnswer: (choice: number) => void;
 }) {
   //keep track of time remaining
-  const { pct, seconds }= useRemaining(view.endsAt, view.durationMs);
+  const { pct, seconds } = useRemaining(view.endsAt, view.durationMs);
   //variable to stop the player from answering if they already answered or the time is up
   const locked = view.answer !== null || pct <= 0;
 
@@ -290,7 +296,9 @@ function QuestionScreen({
         color={pct > 25 ? 'blue' : 'red'}
       />
       <Stack flex={1} justify="center" p="md" gap="xs">
-        <Text c="black" ta="center">Time left: {Math.ceil(seconds)}s</Text>
+        <Text c="black" ta="center">
+          Time left: {Math.ceil(seconds)}s
+        </Text>
         <Text c="dimmed" ta="center" size="sm">
           Question {view.index + 1} of {view.total}
         </Text>
@@ -354,7 +362,14 @@ function RevealScreen({ view }: { view: Extract<View, { name: 'reveal' }> }) {
       : 'Incorrect';
 
   return (
-    <Center h="100%" p="md" bg={view.correct ? 'green.7' : 'red.7'} c="white" mt="lg" bdrs="md">
+    <Center
+      h="100%"
+      p="md"
+      bg={view.correct ? 'green.7' : 'red.7'}
+      c="white"
+      mt="lg"
+      bdrs="md"
+    >
       <Stack align="center" gap="md" maw={480}>
         <Title order={1}>{headline}</Title>
         {view.correct ? (
