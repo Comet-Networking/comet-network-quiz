@@ -1,0 +1,48 @@
+
+id: network-basics
+title: Networking Basics
+questions:
+  - id: q1
+    prompt: Which device forwards packets between different networks?
+    choices:
+      - Switch
+      - Router
+      - Hub
+      - Access Point
+    correctChoice: 1
+
+  - id: q2
+    prompt: What does DNS primarily do?
+    choices:
+      - Encrypt network traffic
+      - Assign MAC addresses
+      - Translate domain names into IP addresses
+      - Establish TCP connections
+    correctChoice: 2
+
+  - id: q3
+    prompt: Which protocol provides reliable, ordered delivery of data?
+    choices:
+      - UDP
+      - IP
+      - ICMP
+      - TCP
+    correctChoice: 3
+
+  - id: q4
+    prompt: Which of these is a private IPv4 address?
+    choices:
+      - 192.168.1.10
+      - 8.8.8.8
+      - 1.1.1.1
+      - 172.32.0.1
+    correctChoice: 0
+
+  - id: q5
+    prompt: What is the default port for HTTPS?
+    choices:
+      - "22"
+      - "53"
+      - "443"
+      - "80"
+    correctChoice: 2

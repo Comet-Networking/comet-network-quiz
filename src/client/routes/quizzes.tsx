@@ -52,6 +52,7 @@ function blankQuestion(): QuizQuestion {
 export function QuizzesPage() {
   const [saveTarget, setSaveTarget] = useState<SaveTarget>('browser');
   const [quizId, setQuizId] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [adminKey, setAdminKey] = useState('');
   const [saving, setSaving] = useState(false);
@@ -172,24 +173,34 @@ export function QuizzesPage() {
     setSaving(true);
     setMessage('');
     try {
-      const response = await fetch('/api/quizzes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-quiz-admin-key': adminKey,
+      const response = await fetch(
+        editingId
+          ? `/api/quizzes/${encodeURIComponent(editingId)}`
+          : '/api/quizzes',
+        {
+          method: editingId ? 'PUT' : 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-quiz-admin-key': adminKey,
+          },
+          body: JSON.stringify({
+            id: trimmedId,
+            title: trimmedTitle,
+            questions: cleanedQuestions,
+          }),
         },
-        body: JSON.stringify({
-          id: trimmedId,
-          title: trimmedTitle,
-          questions: cleanedQuestions,
-        }),
-      });
+      );
 
       if (response.ok) {
         setQuizId('');
         setTitle('');
         setQuestions([blankQuestion()]);
-        setMessage('Quiz saved to the server.');
+        setEditingId(null);
+        setMessage(
+          editingId
+            ? 'Quiz updated on the server.'
+            : 'Quiz saved to the server.',
+        );
         const list = await fetchServerQuizzes();
         if (list) setServerQuizzes(list);
       } else {
@@ -202,6 +213,79 @@ export function QuizzesPage() {
       setMessage('Could not connect to the server.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function editServerQuiz(id: string) {
+    if (!adminKey.trim()) {
+      setMessage('Enter your administrator key to edit a server quiz.');
+      return;
+    }
+
+    setMessage('');
+
+    try {
+      const response = await fetch(`/api/quizzes/${encodeURIComponent(id)}`, {
+        headers: {
+          'x-quiz-admin-key': adminKey,
+        },
+      });
+
+      if (!response.ok) {
+        const result = (await response.json()) as { error?: string };
+        setMessage(result.error ?? 'Could not load quiz.');
+        return;
+      }
+
+      const quiz: unknown = await response.json();
+
+      if (!isQuiz(quiz)) {
+        setMessage('Server returned an invalid quiz.');
+        return;
+      }
+
+      setSaveTarget('server');
+      setEditingId(id);
+      setQuizId(quiz.id);
+      setTitle(quiz.title);
+      setQuestions(quiz.questions);
+      setMessage(`Editing "${quiz.title}".`);
+    } catch {
+      setMessage('Could not connect to the server.');
+    }
+  }
+
+  async function deleteServerQuiz(id: string) {
+    if (!adminKey.trim()) {
+      setMessage('Enter your administrator key to delete a server quiz.');
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to delete this quiz?')) {
+      return;
+    }
+
+    setMessage('');
+
+    try {
+      const response = await fetch(`/api/quizzes/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: {
+          'x-quiz-admin-key': adminKey,
+        },
+      });
+
+      if (!response.ok) {
+        const result = (await response.json()) as { error?: string };
+        setMessage(result.error ?? 'Could not delete quiz.');
+        return;
+      }
+
+      const list = await fetchServerQuizzes();
+      if (list) setServerQuizzes(list);
+      setMessage('Quiz deleted from the server.');
+    } catch {
+      setMessage('Could not connect to the server.');
     }
   }
 
@@ -237,6 +321,7 @@ export function QuizzesPage() {
         </Text>
         <SegmentedControl
           value={saveTarget}
+          disabled={editingId !== null}
           onChange={(value) => {
             setSaveTarget(value === 'server' ? 'server' : 'browser');
             setMessage('');
@@ -255,6 +340,7 @@ export function QuizzesPage() {
             placeholder="network-basics"
             description="Use letters, numbers, hyphens, or underscores."
             value={quizId}
+            disabled={editingId !== null}
             maxLength={64}
             onChange={(event) => {
               setQuizId(event.currentTarget.value);
@@ -359,8 +445,26 @@ export function QuizzesPage() {
             });
           }}
         >
-          {saveTarget === 'server' ? 'Save to server' : 'Save on this device'}
+          {editingId
+            ? 'Update quiz'
+            : saveTarget === 'server'
+              ? 'Save to server'
+              : 'Save on this device'}
         </Button>
+        {editingId !== null && (
+          <Button
+            variant="default"
+            onClick={() => {
+              setEditingId(null);
+              setQuizId('');
+              setTitle('');
+              setQuestions([blankQuestion()]);
+              setMessage('');
+            }}
+          >
+            Cancel editing
+          </Button>
+        )}
       </Group>
 
       <FileInput
@@ -392,6 +496,29 @@ export function QuizzesPage() {
                 <Code>{quiz.id}</Code>
               </Text>
             </Stack>
+            <Group mt="sm">
+              <Button
+                variant="light"
+                onClick={() => {
+                  void editServerQuiz(quiz.id).catch(() => {
+                    setMessage('Could not load quiz.');
+                  });
+                }}
+              >
+                Edit
+              </Button>
+              <Button
+                variant="subtle"
+                color="red"
+                onClick={() => {
+                  void deleteServerQuiz(quiz.id).catch(() => {
+                    setMessage('Could not delete quiz.');
+                  });
+                }}
+              >
+                Delete
+              </Button>
+            </Group>
           </Card>
         ))
       )}

@@ -2,6 +2,7 @@ import { Elysia, t } from 'elysia';
 import { GameManager } from './game';
 import { lanAddresses } from './network';
 import {
+  deleteQuiz,
   listQuizzes,
   loadQuiz,
   QuizError,
@@ -60,6 +61,14 @@ function createApi() {
         questionCount: quiz.questions.length,
       };
     })
+    .get('/quizzes/:id', async ({ request, params, set }) => {
+      if (!canEditQuiz(request)) {
+        set.status = 403;
+        return { error: 'Not authorized' };
+      }
+
+      return await loadQuiz(params.id);
+    })
     .post(
       '/quizzes',
       async ({ request, body, set }) => {
@@ -90,6 +99,15 @@ function createApi() {
         body: t.Unknown(),
       },
     )
+    .delete('/quizzes/:id', async ({ request, params, set }) => {
+      if (!canEditQuiz(request)) {
+        set.status = 403;
+        return { error: 'Not authorized' };
+      }
+
+      await deleteQuiz(params.id);
+      return { success: true };
+    })
     .post('/echo', ({ body }) => ({ message: body.message }), {
       body: t.Object(
         { message: t.String({ minLength: 1, maxLength: 200 }) },
