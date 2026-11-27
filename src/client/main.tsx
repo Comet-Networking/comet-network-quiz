@@ -1,5 +1,5 @@
 import '@mantine/core/styles.css';
-import { MantineProvider } from '@mantine/core';
+import { MantineProvider, createTheme, Button } from '@mantine/core';
 import { createRouter, RouterProvider } from '@tanstack/react-router';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -7,6 +7,15 @@ import { createRoot } from 'react-dom/client';
 import { routeTree } from './routeTree.gen';
 
 const router = createRouter({ routeTree });
+
+// default attributes for mantine elements
+const theme = createTheme({
+  components: {
+    Button: Button.extend({
+      defaultProps: { h: 50, fz: 16 },
+    }),
+  },
+});
 
 declare module '@tanstack/react-router' {
   interface Register {
@@ -19,7 +28,7 @@ if (!root) throw new Error('Missing #root mount point');
 
 createRoot(root).render(
   <StrictMode>
-    <MantineProvider>
+    <MantineProvider theme={theme}>
       <RouterProvider router={router} />
     </MantineProvider>
   </StrictMode>,

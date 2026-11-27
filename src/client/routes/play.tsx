@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import {
   Button,
   Center,
-  Container,
   Loader,
   Paper,
   Progress,
@@ -14,6 +13,7 @@ import {
 } from '@mantine/core';
 import { createFileRoute } from '@tanstack/react-router';
 import { createGameTransport } from '../gameTransport';
+import { ShapeIcon } from '../components/ShapeIcon';
 
 export interface PlayerQuestion {
   id: string;
@@ -51,6 +51,7 @@ export type ClientMessage =
 export interface Transport {
   send(msg: ClientMessage): void;
   subscribe(listener: (msg: ServerMessage) => void): () => void;
+  close(): void;
 }
 
 //structure for different message types (same as server messages, but remove the type field)
@@ -70,7 +71,12 @@ type View =
 const COLORS = ['red', 'blue', 'yellow', 'green'] as const;
 const SHAPES = ['▲', '◆', '●', '■'] as const;
 
-export const Route = createFileRoute('/play')({ component: PlayRoute });
+export const Route = createFileRoute('/play')({
+  validateSearch: (search: Record<string, unknown>): { code?: string } => ({
+    ...(typeof search['code'] === 'string' ? { code: search['code'] } : {}),
+  }),
+  component: PlayRoute,
+});
 
 function PlayRoute() {
   // useState keeps one transport for the lifetime of the page.
@@ -159,6 +165,14 @@ export function PlayerView({ transport }: { transport: Transport }) {
     setView({ ...view, answer: choice });
   };
 
+  //function to leave the game
+  const leaveGame = () => {
+    //close the web socket
+    transport.close();
+    //reset the view
+    setView({ name: 'join' });
+  };
+
   //change the screen based on the view useState
   switch (view.name) {
     case 'join':
@@ -170,7 +184,7 @@ export function PlayerView({ transport }: { transport: Transport }) {
     case 'reveal':
       return <RevealScreen view={view} />;
     case 'finished':
-      return <FinishedScreen view={view} />;
+      return <FinishedScreen view={view} leaveGame={leaveGame} />;
   }
 }
 
@@ -181,76 +195,72 @@ function JoinScreen({
   error?: string | undefined;
   onJoin: (pin: string, name: string) => void;
 }) {
-  const [pin, setPin] = useState('');
+  const { code } = Route.useSearch();
+  const [pin, setPin] = useState(code ?? '');
   const [name, setName] = useState('');
   const ready = pin.trim().length > 0 && name.trim().length > 0;
 
   return (
-    <Center h="100%" p="md">
-      <Container size="xs" w="100%">
-        <Stack gap="md">
-          <Title order={2} ta="center">
-            Join a quiz
-          </Title>
-          <TextInput
-            label="Game PIN"
-            autoCapitalize="characters"
-            size="md"
-            value={pin}
-            onChange={(e) => {
-              setPin(e.currentTarget.value);
-            }}
-            error={error}
-          />
-          <TextInput
-            label="Your name"
-            size="md"
-            maxLength={20}
-            value={name}
-            onChange={(e) => {
-              setName(e.currentTarget.value);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && ready) {
-                onJoin(pin.trim(), name.trim());
-              }
-            }}
-          />
-          <Button
-            size="lg"
-            disabled={!ready}
-            onClick={() => {
-              onJoin(pin.trim(), name.trim());
-            }}
-          >
-            Join game
-          </Button>
-        </Stack>
-      </Container>
-    </Center>
+    <Stack gap="md" mt="lg">
+      <Title order={2} ta="center">
+        Join a quiz
+      </Title>
+      <TextInput
+        label="Game PIN"
+        autoCapitalize="characters"
+        size="md"
+        value={pin}
+        onChange={(e) => {
+          setPin(e.currentTarget.value);
+        }}
+        error={error}
+      />
+      <TextInput
+        label="Your name"
+        size="md"
+        maxLength={20}
+        value={name}
+        onChange={(e) => {
+          setName(e.currentTarget.value);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && ready) {
+            onJoin(pin.trim(), name.trim());
+          }
+        }}
+      />
+      <Button
+        size="lg"
+        disabled={!ready}
+        onClick={() => {
+          onJoin(pin.trim(), name.trim());
+        }}
+      >
+        Join game
+      </Button>
+    </Stack>
   );
 }
 
 function LobbyScreen({ playerName }: { playerName: string }) {
   return (
-    <Center h="100%" p="md">
-      <Stack align="center" gap="sm">
-        <Loader />
-        <Title order={2}>
-          {playerName ? `You're in, ${playerName}` : "You're in"}
-        </Title>
-        <Text c="dimmed">Waiting for the host to start the game.</Text>
-      </Stack>
-    </Center>
+    <Stack align="center" gap="sm" mt="lg">
+      <Loader />
+      <Title order={2}>
+        {playerName ? `You're in, ${playerName}` : "You're in"}
+      </Title>
+      <Text c="dimmed">Waiting for the host to start the game.</Text>
+    </Stack>
   );
 }
 
 //keep track of the time remaining per question
 function useRemaining(endsAt: number, durationMs: number) {
-  const [pct, setPct] = useState(100);
+  const [remainingMs, setRemainingMs] = useState(durationMs);
+
   useEffect(() => {
     const tick = () => {
-      setPct(Math.max(0, ((endsAt - Date.now()) / durationMs) * 100));
+      setRemainingMs(Math.max(0, endsAt - Date.now()));
     };
     tick();
     const id = setInterval(tick, 100);
@@ -258,7 +268,11 @@ function useRemaining(endsAt: number, durationMs: number) {
       clearInterval(id);
     };
   }, [endsAt, durationMs]);
-  return pct;
+
+  return {
+    pct: (remainingMs / durationMs) * 100,
+    seconds: remainingMs / 1000,
+  };
 }
 
 function QuestionScreen({
@@ -269,20 +283,22 @@ function QuestionScreen({
   onAnswer: (choice: number) => void;
 }) {
   //keep track of time remaining
-  const pct = useRemaining(view.endsAt, view.durationMs);
+  const { pct, seconds } = useRemaining(view.endsAt, view.durationMs);
   //variable to stop the player from answering if they already answered or the time is up
   const locked = view.answer !== null || pct <= 0;
 
   return (
-    <Stack h="100%" gap={0}>
+    <Stack h="100%" gap={0} mt="lg">
       <Progress
         value={pct}
         size="md"
-        radius={0}
+        radius="md"
         color={pct > 25 ? 'blue' : 'red'}
       />
-
       <Stack flex={1} justify="center" p="md" gap="xs">
+        <Text c="black" ta="center">
+          Time left: {Math.ceil(seconds)}s
+        </Text>
         <Text c="dimmed" ta="center" size="sm">
           Question {view.index + 1} of {view.total}
         </Text>
@@ -302,20 +318,30 @@ function QuestionScreen({
           return (
             <Button
               key={i}
+              c="white"
               color={COLORS[i] ?? 'gray'}
               autoContrast
-              h={120}
+              mih={120}
+              h="auto"
+              py="sm"
               radius="md"
+              justify="flex-start"
               disabled={locked && !picked}
               variant={picked || !locked ? 'filled' : 'light'}
               onClick={() => {
                 onAnswer(i);
               }}
-              leftSection={<span aria-hidden>{SHAPES[i]}</span>}
+              leftSection={<ShapeIcon index={i} />}
               styles={{
+                root: { minWidth: 0 },
+                inner: { minWidth: 0, width: '100%' },
+                section: { flexShrink: 0 },
                 label: {
+                  minWidth: 0,
                   whiteSpace: 'normal',
+                  overflowWrap: 'anywhere',
                   textAlign: 'left',
+                  lineHeight: 1.25,
                   fontSize: 'var(--mantine-font-size-lg)',
                 },
               }}
@@ -338,7 +364,14 @@ function RevealScreen({ view }: { view: Extract<View, { name: 'reveal' }> }) {
       : 'Incorrect';
 
   return (
-    <Center h="100%" p="md" bg={view.correct ? 'green.7' : 'red.7'} c="white">
+    <Center
+      h="100%"
+      p="md"
+      bg={view.correct ? 'green.7' : 'red.7'}
+      c="white"
+      mt="lg"
+      bdrs="md"
+    >
       <Stack align="center" gap="md" maw={480}>
         <Title order={1}>{headline}</Title>
         {view.correct ? (
@@ -362,19 +395,20 @@ function RevealScreen({ view }: { view: Extract<View, { name: 'reveal' }> }) {
 
 function FinishedScreen({
   view,
+  leaveGame,
 }: {
   view: Extract<View, { name: 'finished' }>;
+  leaveGame: () => void;
 }) {
   return (
-    <Center h="100%" p="md">
-      <Stack align="center" gap="xs">
-        <Title order={1}>Game over</Title>
-        <Text size="xl">
-          You finished {ordinal(view.rank)} of {view.players}
-        </Text>
-        <Text c="dimmed">Final score: {view.score}</Text>
-      </Stack>
-    </Center>
+    <Stack align="center" gap="xs" mt="lg">
+      <Title order={1}>Game over</Title>
+      <Text size="xl">
+        You finished {ordinal(view.rank)} of {view.players}
+      </Text>
+      <Text c="dimmed">Final score: {view.score}</Text>
+      <Button onClick={leaveGame}>Leave game</Button>
+    </Stack>
   );
 }
 
