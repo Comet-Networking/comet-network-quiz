@@ -328,7 +328,9 @@ function QuestionScreen({
               justify="flex-start"
               disabled={locked && !picked}
               variant={picked || !locked ? 'filled' : 'light'}
-              onClick={() => {onAnswer(i)}}
+              onClick={() => {
+                onAnswer(i);
+              }}
               leftSection={<ShapeIcon index={i} />}
               styles={{
                 root: { minWidth: 0 },
